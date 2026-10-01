@@ -4,6 +4,8 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-02
+
 ### Added
 
 - Project skeleton (W0.S1).
@@ -11,3 +13,6 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - Port of the personal mswap (add, list, switch) into the package (W0.S3).
 - CI workflow (W0.S4).
 - Community files and templates (W0.S5).
+
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/shaurya-disciplined/mswap/releases/tag/v0.1.0

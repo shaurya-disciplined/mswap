@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.tmp
+.uv-cache/
+
+# private agent workspace: never published
+.agent/
+AGENTS.md
+GEMINI.md

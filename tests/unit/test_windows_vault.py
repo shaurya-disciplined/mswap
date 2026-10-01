@@ -17,6 +17,7 @@ def test_windows_vault_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.windows
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 def test_windows_vault_max_blob() -> None:
     if sys.platform != "win32":
         pytest.skip("Windows only")
@@ -26,6 +27,7 @@ def test_windows_vault_max_blob() -> None:
 
 
 @pytest.mark.windows
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
 def test_windows_vault_roundtrip() -> None:
     if sys.platform != "win32":
         pytest.skip("Windows only")

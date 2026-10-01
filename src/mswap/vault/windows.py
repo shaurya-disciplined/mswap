@@ -44,7 +44,8 @@ class WindowsVault:
             ]
 
         self._CRED = _CRED
-        self._adv = ctypes.WinDLL("advapi32", use_last_error=True)
+        win_dll = getattr(ctypes, "WinDLL")  # noqa: B009 - dynamic attribute access for non-Windows platforms where ctypes.WinDLL is undefined in typeshed
+        self._adv = win_dll("advapi32", use_last_error=True)
 
     def read(self, target: str) -> bytes | None:
         """Read credential blob for target, or None if not found."""

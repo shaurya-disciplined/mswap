@@ -1,0 +1,47 @@
+name: ci
+on: { push: { branches: [main] }, pull_request: {} }
+concurrency: { group: "ci-${{ github.ref }}", cancel-in-progress: true }
+permissions: { contents: read }
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src
+      - run: uv run python scripts/check_fixtures.py
+      - run: uv run python scripts/check_layers.py
+      - run: uv run python scripts/check_privacy.py
+  test:
+    needs: quality
+    strategy:
+      fail-fast: false
+      # Private-phase matrix. W2.S6 restores the full 3 OS × 4 Python matrix.
+      matrix:
+        include:
+          - { os: windows-latest, python: "3.14" }
+          - { os: ubuntu-latest,  python: "3.11" }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "${{ matrix.python }}"
+          enable-cache: true
+      - run: uv sync --all-groups
+      - run: uv run pytest -q
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv build
+      - run: uv run --with dist/*.whl --no-project python -m mswap --version

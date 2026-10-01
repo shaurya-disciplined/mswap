@@ -40,7 +40,7 @@ def _session_safety_guard() -> Generator[None, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None, None, None]:
     """Isolate environment variables for every test."""
     monkeypatch.setenv("MSWAP_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
@@ -52,8 +52,12 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.delenv("MSWAP_ASCII", raising=False)
     monkeypatch.delenv("MSWAP_DEBUG", raising=False)
 
+    from mswap.vault import reset_memory_vault
+
+    reset_memory_vault()
+
     try:
-        import mswap.vault.windows as win_vault  # type: ignore[import-not-found]
+        import mswap.vault.windows as win_vault
     except ImportError:
         pass
     else:
@@ -76,11 +80,21 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 
                     monkeypatch.setattr(cls, method_name, make_guarded(orig))
 
+    yield
+    from mswap.cli.context import set_context
+
+    set_context(None)
+    reset_memory_vault()
+
 
 @pytest.fixture
-def vault() -> MemoryVault:
-    """Provide a fresh MemoryVault instance."""
-    return MemoryVault()
+def vault(_isolate: None) -> MemoryVault:
+    """Provide the process-wide MemoryVault instance."""
+    from mswap.vault import get_vault
+
+    v = get_vault()
+    assert isinstance(v, MemoryVault)
+    return v
 
 
 @pytest.fixture
@@ -93,3 +107,16 @@ def http() -> FakeHttp:
 def clock() -> FrozenClock:
     """Provide a FrozenClock fixed at 2026-10-02T12:00:00Z."""
     return FrozenClock(datetime(2026, 10, 2, 12, 0, tzinfo=UTC))
+
+
+@pytest.fixture(autouse=True)
+def _inject_test_context(
+    vault: MemoryVault, http: FakeHttp, clock: FrozenClock
+) -> Generator[None, None, None]:
+    """Inject test context into cli context."""
+    from mswap.cli.context import AppContext, set_context
+
+    ctx = AppContext(vault=vault, http=http, clock=clock)
+    set_context(ctx)
+    yield
+    set_context(None)

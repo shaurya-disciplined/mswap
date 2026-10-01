@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import argparse
+
 from mswap.agy.api import whoami
 from mswap.agy.tokens import ensure_fresh, fingerprint
 from mswap.cli.context import AppContext
-from mswap.core.errors import MswapError
+from mswap.core.errors import NotSignedIn
 from mswap.core.store import (
     LIVE_USER,
     backup_last,
@@ -18,12 +20,12 @@ from mswap.core.store import (
 from mswap.ui.theme import bold, cyan, dim, green
 
 
-def run(ctx: AppContext, args: list[str]) -> int:
+def run(ctx: AppContext, args: list[str] | argparse.Namespace) -> int:
     """Execute the add command."""
-    new = "--new" in args
+    new = getattr(args, "new", False) if not isinstance(args, list) else ("--new" in args)
     blob = ctx.vault.read(live_target())
     if not blob:
-        raise MswapError("agy isn't signed in. Run `agy`, sign in, then try again.")
+        raise NotSignedIn("agy isn't signed in.", hint="Run `agy`, sign in, then try again.")
 
     token, _ = ensure_fresh(blob, ctx.http, ctx.clock.now())
     email = whoami(token, ctx.http)

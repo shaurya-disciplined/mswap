@@ -24,8 +24,8 @@ def test_main_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     assert captured_short.out == "mswap 0.1.0 · not affiliated with Google\n"
 
 
-def test_main_unknown_returns_1(capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_unknown_command_returns_64(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["nope"])
-    assert rc == 1
+    assert rc == 64
     captured = capsys.readouterr()
-    assert "mswap: switch Google accounts in agy" in captured.out
+    assert "Run `mswap --help`." in captured.err

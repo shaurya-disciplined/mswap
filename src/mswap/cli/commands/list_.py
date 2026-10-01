@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import argparse
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -15,7 +16,7 @@ from mswap.ui.render import print_quota
 from mswap.ui.theme import bold, cyan, dim, green, red, yellow
 
 
-def run(ctx: AppContext, _args: list[str]) -> int:
+def run(ctx: AppContext, _args: list[str] | argparse.Namespace) -> int:
     """Execute the list command."""
     accounts = load_accounts()
     live = ctx.vault.read(live_target())

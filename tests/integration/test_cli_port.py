@@ -171,9 +171,10 @@ def test_cli_switch_with_one_account(
     vault.write("mswaptest:live", live1, "antigravity")
 
     rc = main(["switch"])
-    assert rc == 1
+    assert rc == 2
     captured = capsys.readouterr()
-    assert "✗ Only one account saved. Add another with `mswap add --new`." in captured.err
+    assert "✗ Only one account saved." in captured.err
+    assert "→ Add another with `mswap add --new`." in captured.err
 
 
 def test_cli_switch_not_matching(capsys: pytest.CaptureFixture[str]) -> None:
@@ -187,9 +188,10 @@ def test_cli_switch_not_matching(capsys: pytest.CaptureFixture[str]) -> None:
     save_accounts(accounts)
 
     rc = main(["switch", "7"])
-    assert rc == 1
+    assert rc == 64
     captured = capsys.readouterr()
-    assert "✗ No account matching '7'. See `mswap list`." in captured.err
+    assert "✗ No account matching '7'." in captured.err
+    assert "→ See `mswap list`." in captured.err
 
 
 def test_cli_list(vault: MemoryVault, http: FakeHttp, capsys: pytest.CaptureFixture[str]) -> None:

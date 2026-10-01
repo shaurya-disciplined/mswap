@@ -1,0 +1,16 @@
+{
+  "currentTier": {
+    "id": "free-tier",
+    "name": "Antigravity"
+  },
+  "allowedTiers": [
+    {
+      "id": "standard-tier"
+    }
+  ],
+  "cloudaicompanionProject": "example-project",
+  "gcpManaged": false,
+  "paidTier": {
+    "id": "g1-pro-tier"
+  }
+}

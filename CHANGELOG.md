@@ -7,3 +7,4 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ### Added
 
 - Project skeleton (W0.S1).
+- Test harness and safety net (W0.S2).

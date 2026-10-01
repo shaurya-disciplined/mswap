@@ -96,8 +96,28 @@ def test_write_exceeding_max_blob_raises_vault_error() -> None:
     oversized = b"x" * 2561
 
     # Act & Assert
-    with pytest.raises(VaultError, match="exceeds maximum"):
+    with pytest.raises(VaultError, match="Credential is too large"):
         vault.write("mswaptest:slot1", oversized, "user@example.com")
+
+
+def test_write_empty_blob_raises_vault_error() -> None:
+    # Arrange
+    vault = MemoryVault()
+
+    # Act & Assert
+    with pytest.raises(VaultError, match="cannot be empty"):
+        vault.write("mswaptest:slot1", b"", "user@example.com")
+
+
+def test_read_user_helper() -> None:
+    # Arrange
+    vault = MemoryVault()
+    target = "mswaptest:user"
+
+    # Act & Assert
+    assert vault._read_user(target) is None
+    vault.write(target, b"data", "alice@example.com")
+    assert vault._read_user(target) == "alice@example.com"
 
 
 def test_fail_on_write() -> None:

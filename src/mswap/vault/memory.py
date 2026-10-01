@@ -29,8 +29,13 @@ class MemoryVault:
         self._write_count += 1
         if self.fail_on_write is not None and self._write_count == self.fail_on_write:
             raise VaultError("simulated failure")
+        if len(blob) == 0:
+            raise VaultError("Credential blob cannot be empty.")
         if len(blob) > MAX_BLOB:
-            raise VaultError(f"blob length {len(blob)} exceeds maximum {MAX_BLOB}")
+            raise VaultError(
+                f"Credential is too large for Windows Credential Manager "
+                f"({len(blob)} bytes, max {MAX_BLOB})."
+            )
         self.entries[target] = (blob, user)
 
     def delete(self, target: str) -> bool:
@@ -45,3 +50,8 @@ class MemoryVault:
         TOUCHED.add(prefix)
         self.calls.append(("list", prefix))
         return sorted(target for target in self.entries if target.startswith(prefix))
+
+    def _read_user(self, target: str) -> str | None:
+        """Test-only helper to read back the user name stored with a credential."""
+        entry = self.entries.get(target)
+        return entry[1] if entry is not None else None

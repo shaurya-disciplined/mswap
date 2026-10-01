@@ -1,0 +1,1 @@
+"""Vault contract test suite."""

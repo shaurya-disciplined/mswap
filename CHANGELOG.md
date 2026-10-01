@@ -8,6 +8,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 - Errors now have exit codes and hints; --json errors (W1.S1).
 
+### Fixed
+
+- Windows vault errors are readable; credential size checked (W1.S2).
+
 ## [0.1.0] - 2026-10-02
 
 ### Added

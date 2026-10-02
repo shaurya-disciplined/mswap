@@ -128,6 +128,7 @@ def switch(
     *,
     force: bool = False,
     include_disabled_in_rotation: bool = False,
+    source: str = "manual",
 ) -> SwitchResult:
     """Switch active Antigravity account per §A7 transaction protocol."""
     with ctx.lock(timeout=10.0):
@@ -193,6 +194,7 @@ def switch(
             from_slot=active.slot if active else None,
             to_slot=target.slot,
             forced=force,
+            source=source,
         )
         with contextlib.suppress(Exception):
             from mswap.core.autopilot import record_switch_state

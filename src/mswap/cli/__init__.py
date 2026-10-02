@@ -34,6 +34,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap auto [--once] [--dry-run]   foreground autopilot loop
   mswap hook install|remove|status  manage agy Stop-hook for autopilot
   mswap schedule install|remove|status  background autopilot via Task Scheduler
+  mswap log [-n 20]                 show audit trail of switches and autopilot
   mswap doctor [--repair] [--online] diagnose environment and accounts
 """
 
@@ -89,6 +90,10 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import schedule
 
             return int(schedule.run(app_ctx, parsed))
+        case "log":
+            from mswap.cli.commands import log
+
+            return int(log.run(app_ctx, parsed))
         case "doctor":
             from mswap.cli.commands import doctor
 

@@ -7,13 +7,20 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ### Added
 
 - Added: macOS/Linux paths, process detection, schedule via launchd/systemd (W5.S4).
-- Added: mswap hook: autopilot checks at the end of each agy turn (W4.S3).
 - Added: experimental Linux Secret Service support; opt-in file vault (W5.S3).
-- mswap auto with dry-run, JSON events and write-back detection (W4.S2).
 - Added: experimental macOS Keychain support (W5.S2).
-- Pool-aware autopilot policy engine (W4.S1).
 - Safe, read-only diagnostic probe script for agy login storage on macOS and Linux (W5.S1).
-- Added: mswap schedule for background autopilot on Windows (W4.S4).
+
+## [0.5.0] - 2026-10-02
+
+### Added
+
+- Audit trail viewer (`mswap log [-n 20] [--json]`) reading rotated audit events in chronological order with local timestamps and kind-specific summaries (W4.S5).
+- Autopilot safety review and lock contention audit error logging (W4.S5).
+- Background autopilot on Windows via Task Scheduler (`mswap schedule install|remove|status [--every MIN]`) (W4.S4).
+- agy Stop-hook integration (`mswap hook install|remove|status`) running autopilot checks at the end of each agy turn with an 8s budget (W4.S3).
+- Foreground autopilot loop (`mswap auto [--once] [--dry-run] [--json]`) with state persistence and agy write-back detection (W4.S2).
+- Pool-aware autopilot policy engine (`core/policy.py`) with dynamic focus and "best" / "consume-first" strategies (W4.S1).
 
 ## [0.4.0] - 2026-10-02
 

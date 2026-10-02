@@ -7,6 +7,7 @@ Must never log unredacted credentials or perform direct vault writes outside swi
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 from collections.abc import Callable
 from datetime import UTC, datetime
@@ -187,6 +188,8 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
                 print("autopilot stopped", file=ctx.out)
             return 0
         except Exception as e:
+            with contextlib.suppress(Exception):
+                ctx.events.emit("error", reason=str(e))
             if ctx.json:
                 err_obj = {
                     "schema": 1,
@@ -201,7 +204,12 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
 
     try:
         while True:
-            do_tick()
+            try:
+                do_tick()
+            except Exception as e:
+                with contextlib.suppress(Exception):
+                    ctx.events.emit("error", reason=str(e))
+                raise
             ctx.sleep(interval)
     except KeyboardInterrupt:
         if not ctx.json:
@@ -322,7 +330,8 @@ def _run_from_hook(
             hook_action=hook_action,
         )
 
-    except Exception:  # noqa: S110 - from-hook must never raise; always exit 0
-        pass
+    except Exception as e:
+        with contextlib.suppress(Exception):
+            ctx.events.emit("error", reason=f"hook: {e}")
 
     return 0

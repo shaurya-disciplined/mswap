@@ -44,3 +44,40 @@ class Events:
 
         with self.path.open("a", encoding="utf-8") as f:
             f.write(line + "\n")
+
+    def read_recent(self, count: int = 20) -> list[dict[str, Any]]:
+        """Read up to `count` recent events from this event log, newest last."""
+        return read_recent_events(self.path, count=count)
+
+
+def read_recent_events(log_path: Path | str, count: int = 20) -> list[dict[str, Any]]:
+    """Read recent audit events across events.log and events.log.1, newest last.
+
+    Returns up to `count` events in chronological order (oldest first, newest last).
+    """
+    path = Path(log_path)
+    rotated_path = path.with_name(f"{path.name}.1")
+
+    events: list[dict[str, Any]] = []
+
+    for p in (rotated_path, path):
+        if not p.exists():
+            continue
+        try:
+            content = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        for line in content.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+                if isinstance(record, dict):
+                    events.append(record)
+            except json.JSONDecodeError:
+                continue
+
+    if count <= 0:
+        return []
+    return events[-count:]

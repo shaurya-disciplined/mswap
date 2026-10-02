@@ -30,6 +30,7 @@ from mswap.agy.install import agy_version, os_arch, user_agent
 from mswap.agy.paths import agy_exe
 from mswap.agy.tokens import TokenService, validate_blob
 from mswap.cli.context import AppContext
+from mswap.cli.update_notice import maybe_print_update_notice
 from mswap.core.errors import CorruptState, TokenDead
 from mswap.core.identity import find_by_fp
 from mswap.core.models import Account
@@ -362,7 +363,7 @@ def check_win_launchers() -> Check:
                         id="win.launchers",
                         status="warn",
                         message="Smart App Control blocked a launcher",
-                        hint="Run mswap via `python -m mswap` (a shim installer arrives in v0.9).",
+                        hint="Run `mswap shim install`.",
                     )
         except OSError:
             continue
@@ -613,4 +614,5 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         word = "problem" if problems == 1 else "problems"
         print(f"{problems} {word} found.", file=ctx.out)
 
+    maybe_print_update_notice(ctx)
     return 1 if fails > 0 else 0

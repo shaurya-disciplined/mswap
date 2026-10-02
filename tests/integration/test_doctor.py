@@ -291,7 +291,7 @@ def test_doctor_win_launchers_sac_blocked(
     assert rc == 0
     captured = capsys.readouterr()
     assert "Smart App Control blocked a launcher" in captured.out
-    assert "Run mswap via `python -m mswap`" in captured.out
+    assert "Run `mswap shim install`." in captured.out
 
 
 def test_doctor_online_all_ok(

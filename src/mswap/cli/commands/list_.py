@@ -7,6 +7,7 @@ import shutil
 from typing import Any
 
 from mswap.cli.context import AppContext
+from mswap.cli.update_notice import maybe_print_update_notice
 from mswap.core.models import Account
 from mswap.core.pace import pace
 from mswap.core.poll_policy import ttl
@@ -127,5 +128,6 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         )
         print(ctx.theme.warn(msg), file=ctx.out)
     print("", file=ctx.out)
+    maybe_print_update_notice(ctx)
 
     return 0

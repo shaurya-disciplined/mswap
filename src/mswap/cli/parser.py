@@ -357,6 +357,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="show the scheduled task status and recent events",
     )
 
+    # shim
+    p_shim = subparsers.add_parser(
+        "shim",
+        parents=[parent],
+        help="install a Smart App Control-safe mswap.cmd launcher (Windows)",
+    )
+    shim_sub = p_shim.add_subparsers(dest="shim_action")
+    p_shim_install = shim_sub.add_parser(
+        "install",
+        parents=[parent],
+        help="write mswap.cmd, which runs `python -m mswap`",
+    )
+    p_shim_install.add_argument(
+        "--dir",
+        default=None,
+        metavar="DIR",
+        help=r"directory to write mswap.cmd into (default: %%USERPROFILE%%\.local\bin)",
+    )
+    p_shim_install.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="replace an existing mswap.cmd that is not an mswap shim (backed up to .bak)",
+    )
+
     # log
     p_log = subparsers.add_parser(
         "log",

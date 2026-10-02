@@ -119,6 +119,26 @@ def test_invalid_focus_raises_usage_error(tmp_path: Path) -> None:
     assert "autopilot.focus" in str(exc_info.value)
 
 
+@pytest.mark.parametrize("action", ["notify", "switch"])
+def test_valid_hook_action(tmp_path: Path, action: str) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f'[autopilot]\nhook_action = "{action}"\n', encoding="utf-8")
+    cfg = load_settings(p)
+    assert cfg.autopilot.hook_action == action
+
+
+@pytest.mark.parametrize("invalid_action", ["random", "alert", 123, True])
+def test_invalid_hook_action_raises_usage_error(tmp_path: Path, invalid_action: object) -> None:
+    p = tmp_path / "settings.toml"
+    val_repr = (
+        str(invalid_action).lower() if isinstance(invalid_action, bool) else repr(invalid_action)
+    )
+    p.write_text(f"[autopilot]\nhook_action = {val_repr}\n", encoding="utf-8")
+    with pytest.raises(UsageError) as exc_info:
+        load_settings(p)
+    assert "autopilot.hook_action" in str(exc_info.value)
+
+
 def test_invalid_ui_ascii_raises_usage_error(tmp_path: Path) -> None:
     p = tmp_path / "settings.toml"
     p.write_text('[ui]\nascii = "yes"\n', encoding="utf-8")

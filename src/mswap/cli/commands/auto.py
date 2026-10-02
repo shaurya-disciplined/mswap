@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -17,8 +18,11 @@ from mswap.core.errors import UsageError
 from mswap.core.identity import find_by_fp
 from mswap.core.policy import Decision, _normalize_dt
 from mswap.core.policy import Settings as PolicySettings
+from mswap.core.poll_policy import is_stale
 from mswap.core.settings import load_settings
-from mswap.core.store import live_target
+from mswap.core.store import find_active, live_target
+from mswap.core.usage_cache import UsageCache
+from mswap.util.clock import SystemClock
 
 
 def _find_earliest_reset(
@@ -115,6 +119,11 @@ def _render_json_event(
 
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the mswap auto command."""
+    from_hook = getattr(args, "from_hook", False)
+
+    if from_hook:
+        return _run_from_hook(ctx, args)
+
     cfg = load_settings()
 
     threshold_arg = getattr(args, "threshold", None)
@@ -198,3 +207,122 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         if not ctx.json:
             print("autopilot stopped", file=ctx.out)
         return 0
+
+
+def _run_from_hook(
+    ctx: AppContext,
+    _args: argparse.Namespace,
+    *,
+    timer: Callable[[], float] | None = None,
+) -> int:
+    """Run autopilot from an agy Stop hook with an 8-second time budget.
+
+    Never raises.  Always exits 0.  Only prints if a switch happened
+    or if the hook_action is "notify" and the policy says switch.
+    """
+    import time as _time
+
+    if timer is not None:
+        get_elapsed = timer
+    elif hasattr(ctx, "clock") and not isinstance(ctx.clock, SystemClock):
+        start_dt = ctx.clock.now()
+
+        def _get_elapsed_clock() -> float:
+            return (ctx.clock.now() - start_dt).total_seconds()
+
+        get_elapsed = _get_elapsed_clock
+    else:
+        start_mono = _time.monotonic()
+
+        def _get_elapsed_mono() -> float:
+            return _time.monotonic() - start_mono
+
+        get_elapsed = _get_elapsed_mono
+
+    try:
+        if 8.0 - get_elapsed() <= 0:
+            return 0
+
+        cfg = load_settings()
+        hook_action = cfg.autopilot.hook_action
+
+        accounts = ctx.store.load()
+        if not accounts:
+            return 0
+
+        # Check if any account needs a network fetch
+        cache_path = ctx.store.root / "usage.json"
+        cache = UsageCache(cache_path)
+        now_dt = ctx.clock.now()
+        live_blob = ctx.vault.read(live_target())
+        active_acc = find_active(accounts, live_blob)
+
+        fetch_needed = False
+        for acc in accounts:
+            if acc.quarantined is not None:
+                continue
+            cached = cache.get(acc.fp)
+            if cached is None:
+                fetch_needed = True
+                break
+            if cached.backoff_until is not None and now_dt < cached.backoff_until:
+                continue
+            is_active = active_acc is not None and acc.slot == active_acc.slot
+            if is_stale(cached, now_dt, active=is_active):
+                fetch_needed = True
+                break
+
+        remaining = 8.0 - get_elapsed()
+        if remaining <= 0:
+            return 0
+
+        # A skip if data refresh would exceed it: use cache only when any fetch
+        # would be needed and the remaining budget < 5 s
+        cache_only = fetch_needed and remaining < 5.0
+
+        policy_settings = PolicySettings(
+            threshold=cfg.autopilot.threshold,
+            margin=cfg.autopilot.margin,
+            cooldown_s=cfg.autopilot.cooldown,
+            strategy=cfg.autopilot.strategy,
+            focus=cfg.autopilot.focus,
+        )
+
+        force = hook_action == "switch"
+        dry_run = hook_action == "notify"
+
+        decision = tick(
+            ctx,
+            policy_settings,
+            dry_run=dry_run,
+            force=force,
+            cache_only=cache_only,
+        )
+
+        if decision.kind == "switch":
+            if hook_action == "notify":
+                target = decision.target_slot
+                msg = (
+                    f"mswap: account {target} is better now. "
+                    "Run `mswap switch --resume` after this turn."
+                )
+                print(msg, file=ctx.out, flush=True)
+            else:
+                print(
+                    f"mswap: switched to account {decision.target_slot}.",
+                    file=ctx.out,
+                    flush=True,
+                )
+
+        ctx.events.emit(
+            f"hook_{decision.kind}",
+            reason=decision.reason,
+            from_slot=active_acc.slot if active_acc else None,
+            to_slot=decision.target_slot,
+            hook_action=hook_action,
+        )
+
+    except Exception:  # noqa: S110 - from-hook must never raise; always exit 0
+        pass
+
+    return 0

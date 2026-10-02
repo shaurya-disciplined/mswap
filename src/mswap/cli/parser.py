@@ -305,6 +305,27 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="allow switching accounts even if inside agy",
     )
+    p_auto.add_argument(
+        "--from-hook",
+        action="store_true",
+        default=False,
+        help="run from an agy Stop hook (8s budget, never raises, always exit 0)",
+    )
+
+    # hook
+    p_hook = subparsers.add_parser(
+        "hook",
+        parents=[parent],
+        help="manage agy Stop-hook for autopilot",
+    )
+    p_hook.add_argument(
+        "hook_action",
+        nargs="?",
+        choices=["install", "remove", "status"],
+        default=None,
+        metavar="ACTION",
+        help="install, remove, or show status of the mswap-autopilot hook",
+    )
 
     # schedule
     p_schedule = subparsers.add_parser(

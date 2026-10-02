@@ -61,6 +61,11 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
         "doctor": doctor.run,
     }
 
+    if os.environ.get("MSWAP_DEMO") == "1":
+        from mswap.cli.commands import demo_seed
+
+        commands["__demo-seed"] = demo_seed.run
+
     parsed: argparse.Namespace | None = None
     cmd_name = next((arg for arg in args_list if not arg.startswith("-")), "")
 

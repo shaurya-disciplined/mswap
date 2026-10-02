@@ -103,8 +103,8 @@ def default_context(args: argparse.Namespace | None = None) -> AppContext:
         ),
         journal=Journal(home / "journal.json"),
         events=Events(home / "events.log"),
-        procs=running_agy,
-        inside_agy=default_inside_agy,
+        procs=(lambda: []) if os.environ.get("MSWAP_DEMO") == "1" else running_agy,
+        inside_agy=(lambda: False) if os.environ.get("MSWAP_DEMO") == "1" else default_inside_agy,
         sleep=time.sleep,
         runner=_default_runner,
     )

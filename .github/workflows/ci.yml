@@ -17,6 +17,7 @@ jobs:
       - run: uv run python scripts/check_fixtures.py
       - run: uv run python scripts/check_layers.py
       - run: uv run python scripts/check_privacy.py
+      - run: uv run python scripts/check_links.py
   test:
     needs: quality
     strategy:

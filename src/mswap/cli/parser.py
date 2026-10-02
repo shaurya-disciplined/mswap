@@ -7,6 +7,7 @@ Must never execute business logic or perform direct file or vault I/O.
 from __future__ import annotations
 
 import argparse
+import os
 from collections.abc import Sequence
 from typing import NoReturn
 
@@ -226,5 +227,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="run network checks for token refresh and quota API",
     )
+
+    if os.environ.get("MSWAP_DEMO") == "1":
+        subparsers.add_parser(
+            "__demo-seed",
+            parents=[parent],
+            help="seed fake demo accounts and usage cache",
+        )
 
     return parser

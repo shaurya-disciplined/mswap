@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 from mswap.core.errors import VaultError
 from mswap.vault.base import Vault
@@ -12,8 +13,23 @@ from mswap.vault.memory import MemoryVault
 _MEMORY_VAULT_SINGLETON: MemoryVault | None = None
 
 
+def _demo_vault_path() -> Path:
+    if "MSWAP_HOME" in os.environ:
+        return Path(os.environ["MSWAP_HOME"]) / "demo_vault.json"
+    if sys.platform == "win32":
+        local_app = os.environ.get("LOCALAPPDATA")
+        base = Path(local_app) if local_app else Path.home() / "AppData" / "Local"
+        return base / "mswap" / "demo_vault.json"
+    return Path.home() / ".mswap" / "demo_vault.json"
+
+
 def get_vault() -> Vault:
     """Return the configured vault instance."""
+    if os.environ.get("MSWAP_DEMO") == "1":
+        from mswap.vault.demo import DemoVault
+
+        return DemoVault(_demo_vault_path())
+
     backend = os.environ.get("MSWAP_VAULT", "native")
     if backend == "memory":
         global _MEMORY_VAULT_SINGLETON

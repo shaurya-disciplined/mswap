@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -111,6 +113,14 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
                 None,
                 "saved login expired or revoked  → sign in as it in agy, then `mswap add`",
             )
+        if os.environ.get("MSWAP_DEMO") == "1":
+            usage_file = ctx.store.root / "usage.json"
+            if usage_file.exists():
+                with contextlib.suppress(Exception):
+                    usage_json = json.loads(usage_file.read_text(encoding="utf-8"))
+                    acc_entry = usage_json.get("accounts", {}).get(acc.fp)
+                    if acc_entry and "groups" in acc_entry:
+                        return acc, acc_entry["groups"], None
         blob = live if is_active else ctx.vault.read(slot_target(acc.slot))
         if not blob:
             return acc, None, "saved login missing (run `mswap add` while signed in as it)"

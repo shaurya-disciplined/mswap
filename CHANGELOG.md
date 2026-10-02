@@ -6,6 +6,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- Docs: README, how it works, troubleshooting, security (W2.S5).
+- Demo tape (`docs/demo.tape`) and rendered walkthrough GIF (`docs/assets/demo.gif`) (W2.S5).
+- Relative markdown link validation script (`scripts/check_links.py`) integrated into CI quality job (W2.S5).
+- Demo environment support with hidden `mswap __demo-seed` command and `DemoVault` (W2.S5).
 - ADC session mode spike runner in `scripts/spikes/adc_spike.py` evaluating `AGY_ADC_AUTH` behavior and billing safety (W2.S3).
 - agy process awareness, switch --wait / --resume, guard when run inside agy (W2.S2).
 - Interactive live switch spike kit in `scripts/spikes/live_switch_spike.ps1` for guided evaluation of running agy process switch and write-back behavior (W2.S1).

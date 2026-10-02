@@ -306,6 +306,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="allow switching accounts even if inside agy",
     )
 
+    # schedule
+    p_schedule = subparsers.add_parser(
+        "schedule",
+        parents=[parent],
+        help="manage background autopilot via Windows Task Scheduler",
+    )
+    schedule_sub = p_schedule.add_subparsers(dest="schedule_action")
+    p_sched_install = schedule_sub.add_parser(
+        "install",
+        parents=[parent],
+        help="register the autopilot scheduled task",
+    )
+    p_sched_install.add_argument(
+        "--every",
+        type=int,
+        default=5,
+        metavar="MIN",
+        help="run autopilot every MIN minutes (1-60, default: 5)",
+    )
+    schedule_sub.add_parser(
+        "remove",
+        parents=[parent],
+        help="unregister the autopilot scheduled task",
+    )
+    schedule_sub.add_parser(
+        "status",
+        parents=[parent],
+        help="show the scheduled task status and recent events",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- Added: macOS/Linux paths, process detection, schedule via launchd/systemd (W5.S4).
 - Added: mswap hook: autopilot checks at the end of each agy turn (W4.S3).
 - Added: experimental Linux Secret Service support; opt-in file vault (W5.S3).
 - mswap auto with dry-run, JSON events and write-back detection (W4.S2).

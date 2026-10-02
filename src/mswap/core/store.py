@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
+import sys
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
@@ -130,6 +132,9 @@ class AccountStore:
         legacy_config = legacy / "config.json"
         if legacy_config.exists():
             self.root.mkdir(parents=True, exist_ok=True)
+            if sys.platform != "win32":
+                with contextlib.suppress(OSError):
+                    self.root.chmod(0o700)
             root_client = self.root / "client.json"
             shutil.copy2(legacy_config, root_client)
             legacy_config.replace(legacy / "config.v1.bak")
@@ -177,6 +182,9 @@ class AccountStore:
     def save(self, accounts: Sequence[Account]) -> None:
         """Save accounts metadata atomically to accounts.json, sorted by slot."""
         self.root.mkdir(parents=True, exist_ok=True)
+        if sys.platform != "win32":
+            with contextlib.suppress(OSError):
+                self.root.chmod(0o700)
         target_file = self.root / "accounts.json"
         tmp_file = target_file.with_suffix(".tmp")
         sorted_accounts = sorted(accounts, key=lambda a: a.slot)

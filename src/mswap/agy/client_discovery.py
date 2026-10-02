@@ -40,7 +40,8 @@ def _config_file() -> Path:
 
 def _exe_sig(exe: Path) -> str:
     try:
-        st = exe.stat()
+        real_exe = exe.resolve()
+        st = real_exe.stat()
         return f"{st.st_size}:{int(st.st_mtime)}"
     except OSError:
         return ""
@@ -101,7 +102,8 @@ def discover(
             return OAuthClient(client_id=str(cached_cid), client_secret=str(cached_secrets[0]))
         raise AgyNotFound(f"agy not found at {exe}", hint="Install agy, or set MSWAP_AGY_EXE.")
 
-    with exe.open("rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:
+    real_exe = exe.resolve()
+    with real_exe.open("rb") as f, mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as m:
         raw_ids = [b.decode("utf-8") for b in re.findall(CLIENT_ID_RE, m)]
         raw_secrets = [b.decode("utf-8") for b in re.findall(SECRET_RE, m)]
 

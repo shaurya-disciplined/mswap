@@ -34,8 +34,31 @@ jobs:
           enable-cache: true
       - run: uv sync --all-groups
       - run: uv run pytest -q
+  contract:
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        python: ["3.13"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "${{ matrix.python }}"
+          enable-cache: true
+      - run: uv sync --all-groups
+      - if: runner.os == 'Windows'
+        run: uv run pytest tests/contract -q -m "not live"
+      - if: runner.os == 'macOS'
+        run: uv run pytest tests/contract -q -m "not live"
+      - if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y gnome-keyring libsecret-tools dbus-x11
+          dbus-run-session -- bash -c 'echo -n mswaptest | gnome-keyring-daemon --unlock --components=secrets && uv run pytest tests/contract -q'
   build:
-    needs: test
+    needs: [test, contract]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

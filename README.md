@@ -102,6 +102,17 @@ Learn more in [How It Works](docs/how-it-works.md).
 
 Read the complete [Security Policy](docs/security.md).
 
+## Platform Support
+
+| Platform | Credential Backend | Status | Notes |
+|---|---|---|---|
+| **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs |
+| **macOS** | Keychain Services (`security` CLI) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive |
+| **Linux** | Secret Service (`secret-tool`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive |
+| **Linux (Headless)** | File Vault fallback (`MSWAP_VAULT=file`) | **Experimental** | Opt-in unencrypted file fallback for headless/WSL environments |
+
+See [docs/platforms.md](docs/platforms.md) for architecture, security details, and instructions on running the probe to help verify real-world POSIX storage.
+
 ## Frequently Asked Questions
 
 ### Will I be charged?
@@ -117,7 +128,7 @@ No. `mswap` touches only the Antigravity CLI login credential `gemini:antigravit
 Running agy's `/logout` command revokes the OAuth token on Google servers, requiring a full web browser sign-in next time. `mswap` rotates between your saved tokens locally without revoking them.
 
 ### Does it work on macOS and Linux?
-Support for macOS Keychain and Linux Secret Service is experimental starting in v0.6. The current release is tested for Windows 10 and 11.
+Yes. macOS Keychain and Linux Secret Service backends are supported experimentally starting in v0.6.0. All backends are verified by contract test suites in CI; real-world storage will graduate to fully supported once verified on physical hardware (see [Platform Support](#platform-support) and [docs/platforms.md](docs/platforms.md)).
 
 ---
 

@@ -33,14 +33,14 @@ def _force_windows() -> None:
 
 
 def test_shim_text_is_crlf_and_uses_module_launch() -> None:
-    assert shim_text("C:\\py\\python.exe") == '@"C:\\py\\python.exe" -m mswap %*\r\n'
+    assert shim_text("C:\\py\\python.exe") == '@"C:\\py\\python.exe" -P -m mswap %*\r\n'
 
 
 def test_install_writes_shim_with_crlf_bytes(tmp_path: Path) -> None:
     target, backup = install_shim(tmp_path / "bin", "py.exe", force=False)
     assert backup is None
     assert target == tmp_path / "bin" / SHIM_NAME
-    assert target.read_bytes() == b'@"py.exe" -m mswap %*\r\n'
+    assert target.read_bytes() == b'@"py.exe" -P -m mswap %*\r\n'
 
 
 def test_install_overwrites_existing_mswap_shim_without_force(tmp_path: Path) -> None:

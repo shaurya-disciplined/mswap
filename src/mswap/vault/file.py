@@ -140,7 +140,7 @@ class FileVault:
         blob: bytes,
         user: str,  # noqa: ARG002 - Vault protocol parameter; user metadata is kept in accounts.json
     ) -> None:
-        """Write credential blob for target to an encrypted/isolated file."""
+        """Write credential blob for target to an owner-only (0600) file; base64, not encrypted."""
         if len(blob) == 0:
             raise VaultError("Credential blob cannot be empty.")
         if len(blob) > MAX_BLOB:

@@ -12,13 +12,16 @@ key.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
 
 from mswap.core.errors import CorruptState
+from mswap.util.shellquote import RUN_MODULE, quote_command_path
 
 HOOK_SET = "mswap-autopilot"
 
@@ -33,8 +36,8 @@ def hooks_path() -> Path:
 
 def _default_command() -> str:
     """Build the default hook command string."""
-    exe = sys.executable
-    return f'"{exe}" -m mswap auto --once --quiet --from-hook'
+    exe = quote_command_path(sys.executable, windows=sys.platform == "win32")
+    return f"{exe} {RUN_MODULE} auto --once --quiet --from-hook"
 
 
 def _load_hooks(path: Path) -> dict[str, Any]:
@@ -67,6 +70,10 @@ def _write_hooks(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f"{path.name}.tmp")
     tmp.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    if path.exists():
+        # hooks.json belongs to agy: keep its permissions rather than loosening them to our umask.
+        with contextlib.suppress(OSError):
+            shutil.copymode(path, tmp)
     tmp.replace(path)
 
 

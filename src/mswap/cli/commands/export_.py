@@ -17,6 +17,7 @@ from mswap.core.bundle import (
     check_crypto_available,
     encrypt_bundle,
     get_export_passphrase,
+    refuse_existing,
     write_secure_file,
 )
 from mswap.core.errors import CorruptState, UsageError
@@ -35,6 +36,8 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         raise UsageError("No accounts saved yet.", hint="Run `mswap add` first.")
 
     target_file = Path(args.file)
+    if target_file.exists() or target_file.is_symlink():
+        raise refuse_existing(target_file)
 
     selectors_raw = getattr(args, "accounts", None)
     if selectors_raw:

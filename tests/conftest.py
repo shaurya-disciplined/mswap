@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+import subprocess
 import sys
 from collections.abc import Generator
 from datetime import UTC, datetime
@@ -108,6 +110,42 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None,
 
     set_context(None)
     reset_memory_vault()
+
+
+_SECRET_ARGV_PATTERNS = {
+    "access token (ya29.)": re.compile(r"ya29\."),
+    "refresh token (1//)": re.compile(r"1//[\w-]"),
+    "client secret (GOCSPX-)": re.compile(r"GOCSPX-"),
+    "JWT (eyJ...)": re.compile(r"eyJ[\w-]+\.[\w-]+\.[\w-]+"),
+    "credential JSON key": re.compile(r"\"(access_token|refresh_token|id_token|client_secret)\""),
+}
+
+
+def assert_no_secret_in_argv(args: Any) -> None:
+    """Fail when a command line handed to a subprocess carries anything secret-shaped.
+
+    Command lines are readable by every process of the same user (and by the process list), so
+    a credential must only ever travel on stdin. The failure message names the pattern, never
+    the offending value.
+    """
+    parts = [args] if isinstance(args, (str, bytes, os.PathLike)) else list(args)
+    for part in parts:
+        text = os.fsdecode(part)
+        for label, pattern in _SECRET_ARGV_PATTERNS.items():
+            if pattern.search(text):
+                raise AssertionError(f"A subprocess argument contains a {label}.")
+
+
+@pytest.fixture(autouse=True)
+def _no_secrets_in_argv(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Guard every subprocess started during a test (run, Popen, check_output all land here)."""
+    real_init = subprocess.Popen.__init__
+
+    def guarded_init(self: Any, args: Any, *rest: Any, **kwargs: Any) -> None:
+        assert_no_secret_in_argv(args)
+        real_init(self, args, *rest, **kwargs)
+
+    monkeypatch.setattr(subprocess.Popen, "__init__", guarded_init)
 
 
 @pytest.fixture

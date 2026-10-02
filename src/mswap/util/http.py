@@ -40,8 +40,23 @@ class Http(Protocol):
     ) -> HttpResponse: ...
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Never follow a redirect.
+
+    urllib would forward the Authorization header (and a form body holding a refresh token) to
+    whatever host a 3xx response names, even over plain http. mswap only talks to fixed Google
+    endpoints, so a redirect is unexpected: it surfaces as an ordinary 3xx status instead.
+    """
+
+    def redirect_request(self, *_args: Any, **_kwargs: Any) -> None:
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
 class UrllibHttp:
-    """Real HTTP client using urllib.request."""
+    """Real HTTP client using urllib.request (https only, no redirects)."""
 
     def request(
         self,
@@ -56,8 +71,8 @@ class UrllibHttp:
         if os.environ.get("MSWAP_NO_NETWORK") == "1":
             raise NetworkError("network disabled (MSWAP_NO_NETWORK=1)")
 
-        if not url.startswith(("http://", "https://")):
-            raise NetworkError(f"unsupported URL scheme: {url}")
+        if not url.startswith("https://"):
+            raise NetworkError(f"unsupported URL scheme (https only): {url}")
 
         req_headers = dict(headers) if headers else {}
         data: bytes | None = None
@@ -71,11 +86,11 @@ class UrllibHttp:
             if "Content-Type" not in req_headers:
                 req_headers["Content-Type"] = "application/x-www-form-urlencoded"
 
-        req = urllib.request.Request(  # noqa: S310 - URL schemes are validated above to http and https
+        req = urllib.request.Request(  # noqa: S310 - URL scheme is validated above to https
             url, data=data, headers=req_headers, method=method.upper()
         )
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 - URL validated above
+            with _OPENER.open(req, timeout=timeout) as resp:
                 resp_body = resp.read()
                 resp_headers = {k: v for k, v in resp.headers.items()}
                 return HttpResponse(status=resp.status, body=resp_body, headers=resp_headers)

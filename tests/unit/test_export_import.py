@@ -20,7 +20,7 @@ from mswap.cli.commands.import_ import run as run_import
 from mswap.cli.context import AppContext
 from mswap.cli.parser import build_parser
 from mswap.core.bundle import decrypt_bundle, encrypt_bundle
-from mswap.core.errors import CorruptState, UsageError
+from mswap.core.errors import CorruptState, UsageError, VaultError
 from mswap.core.models import Account, Quarantine, account_to_json
 from mswap.core.store import live_target, slot_target
 from mswap.vault.memory import MemoryVault
@@ -432,3 +432,89 @@ def test_export_file_is_owner_only_on_posix(ctx: AppContext, tmp_path: Path) -> 
     path = tmp_path / "bundle.json"
     _export(ctx, path)
     assert path.stat().st_mode & 0o777 == 0o600
+
+
+def test_export_refuses_to_overwrite_an_existing_file(ctx: AppContext, tmp_path: Path) -> None:
+    _seed(ctx, _account(ctx, 1))
+    path = tmp_path / "precious.txt"
+    path.write_text("keep me", encoding="utf-8")
+    with pytest.raises(UsageError, match="already exists") as info:
+        _export(ctx, path)
+    assert info.value.hint == "Choose a new file name, or delete the old file first."
+    assert path.read_text(encoding="utf-8") == "keep me"
+
+
+def test_export_refuses_an_existing_directory(ctx: AppContext, tmp_path: Path) -> None:
+    _seed(ctx, _account(ctx, 1))
+    with pytest.raises(UsageError, match="already exists"):
+        _export(ctx, tmp_path)
+
+
+def test_write_secure_file_never_overwrites_even_when_the_pre_check_is_raced(
+    tmp_path: Path,
+) -> None:
+    from mswap.core.bundle import write_secure_file
+
+    path = tmp_path / "bundle.json"
+    path.write_text("original", encoding="utf-8")
+    with pytest.raises(UsageError, match="already exists"):
+        write_secure_file(path, "new")
+    assert path.read_text(encoding="utf-8") == "original"
+
+
+def _bundle_of_two(ctx: AppContext, tmp_path: Path) -> Path:
+    _seed(ctx, _account(ctx, 1), _account(ctx, 2))
+    path = tmp_path / "two.json"
+    _export(ctx, path)
+    return path
+
+
+def test_import_out_of_slots_mid_bundle_writes_nothing(
+    ctx: AppContext, vault: MemoryVault, tmp_path: Path
+) -> None:
+    path = _bundle_of_two(ctx, tmp_path)
+    for slot in (1, 2):
+        vault.delete(slot_target(slot))
+    # 98 other accounts leave exactly one free slot (99) for a bundle that has two new entries.
+    others = [
+        dataclasses.replace(_account(ctx, s), email=f"full{s}@example.com") for s in range(1, 99)
+    ]
+    ctx.store.save(others)
+    writes_before = _writes(vault)
+
+    with pytest.raises(UsageError, match="Account limit reached"):
+        _import(ctx, path)
+
+    assert _writes(vault) == writes_before
+    assert slot_target(99) not in vault.entries
+    assert len(ctx.store.load()) == 98
+
+
+def test_import_vault_failure_removes_the_logins_it_already_wrote(
+    ctx: AppContext, vault: MemoryVault, tmp_path: Path
+) -> None:
+    path = _bundle_of_two(ctx, tmp_path)
+    for slot in (1, 2):
+        vault.delete(slot_target(slot))
+    ctx.store.save([])
+    vault.fail_on_write = vault._write_count + 2  # the second login fails to save
+
+    with pytest.raises(VaultError, match="simulated failure"):
+        _import(ctx, path)
+
+    assert vault.list(slot_target(0)[:-1]) == []
+    assert ctx.store.load() == []
+
+
+def test_import_vault_failure_restores_a_replaced_login(
+    ctx: AppContext, vault: MemoryVault, tmp_path: Path
+) -> None:
+    path = _bundle_of_two(ctx, tmp_path)
+    vault.write(slot_target(1), make_blob(9), "user1@example.com")
+    vault.fail_on_write = vault._write_count + 2  # slot 1 is replaced, then slot 2 fails
+
+    with pytest.raises(VaultError, match="simulated failure"):
+        _import(ctx, path, "--force")
+
+    assert vault.read(slot_target(1)) == make_blob(9)
+    assert vault._read_user(slot_target(1)) == "user1@example.com"

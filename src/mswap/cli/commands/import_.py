@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import contextlib
 import dataclasses
 import json
 from pathlib import Path
@@ -45,6 +46,100 @@ def _parse_entry(item: object) -> tuple[Account, bytes]:
     return account, blob
 
 
+@dataclasses.dataclass
+class _Plan:
+    """What an import will do, decided entirely before anything is written."""
+
+    original: list[Account]
+    accounts: list[Account]
+    writes: list[tuple[int, str, bytes]]  # (slot, email, blob) in write order
+    imported: int = 0
+    updated: int = 0
+    skipped: int = 0
+
+
+def _plan_import(
+    ctx: AppContext,
+    accounts: list[Account],
+    entries: list[tuple[Account, bytes]],
+    *,
+    force: bool,
+) -> _Plan:
+    """Decide slots and replacements for every entry without touching the vault or the store.
+
+    Running out of slots therefore fails before any login has been written (no orphan vault
+    entries).
+    """
+    plan = _Plan(original=accounts, accounts=list(accounts), writes=[])
+    for incoming, blob in entries:
+        existing = next(
+            (a for a in plan.accounts if a.email.lower() == incoming.email.lower()), None
+        )
+        if existing is not None:
+            # Replace only on --force, or when our copy is quarantined and the bundle's is not.
+            replace = force or (existing.quarantined is not None and incoming.quarantined is None)
+            if not replace:
+                plan.skipped += 1
+                continue
+            slot = existing.slot
+            alias = incoming.alias
+            if alias and _alias_taken(plan.accounts, alias, slot):
+                alias = existing.alias
+            plan.accounts[plan.accounts.index(existing)] = dataclasses.replace(
+                incoming,
+                slot=slot,
+                alias=alias,
+                fp=fingerprint(blob),
+                updated_at=ctx.clock.now(),
+            )
+            plan.updated += 1
+        else:
+            used_slots = {a.slot for a in plan.accounts}
+            slot_or_none = next((s for s in range(1, 100) if s not in used_slots), None)
+            if slot_or_none is None:
+                raise UsageError("Account limit reached (maximum 99 accounts).")
+            slot = slot_or_none
+            alias = incoming.alias
+            if alias and _alias_taken(plan.accounts, alias, slot):
+                alias = None
+            plan.accounts.append(
+                dataclasses.replace(
+                    incoming,
+                    slot=slot,
+                    alias=alias,
+                    fp=fingerprint(blob),
+                    updated_at=ctx.clock.now(),
+                )
+            )
+            plan.imported += 1
+        plan.writes.append((slot, incoming.email, blob))
+    return plan
+
+
+def _owner(plan: _Plan, slot: int) -> str:
+    """Return the email that owned `slot` before the import (the vault's user label)."""
+    return next((a.email for a in plan.original if a.slot == slot), "antigravity")
+
+
+def _apply_import(ctx: AppContext, plan: _Plan) -> None:
+    """Write the planned logins, then the metadata; undo the vault writes if anything fails."""
+    done: list[tuple[int, bytes | None]] = []
+    try:
+        for slot, email, blob in plan.writes:
+            previous = ctx.vault.read(slot_target(slot))
+            ctx.vault.write(slot_target(slot), blob, email)
+            done.append((slot, previous))
+        ctx.store.save(plan.accounts)
+    except Exception:
+        for slot, previous in reversed(done):
+            with contextlib.suppress(Exception):
+                if previous is None:
+                    ctx.vault.delete(slot_target(slot))
+                else:
+                    ctx.vault.write(slot_target(slot), previous, _owner(plan, slot))
+        raise
+
+
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the import command."""
     check_crypto_available()
@@ -69,61 +164,11 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
     force = bool(getattr(args, "force", False))
     entries = [_parse_entry(item) for item in accounts_data]
 
-    imported = 0
-    updated = 0
-    skipped = 0
-
     with ctx.lock(timeout=10.0):
-        accounts = list(ctx.store.load())
+        plan = _plan_import(ctx, list(ctx.store.load()), entries, force=force)
+        _apply_import(ctx, plan)
 
-        for incoming, blob in entries:
-            existing = next(
-                (a for a in accounts if a.email.lower() == incoming.email.lower()), None
-            )
-
-            if existing is not None:
-                # Replace only on --force, or when our copy is quarantined and the bundle's is not.
-                replace = force or (
-                    existing.quarantined is not None and incoming.quarantined is None
-                )
-                if not replace:
-                    skipped += 1
-                    continue
-                slot = existing.slot
-                alias = incoming.alias
-                if alias and _alias_taken(accounts, alias, slot):
-                    alias = existing.alias
-                ctx.vault.write(slot_target(slot), blob, incoming.email)
-                accounts[accounts.index(existing)] = dataclasses.replace(
-                    incoming,
-                    slot=slot,
-                    alias=alias,
-                    fp=fingerprint(blob),
-                    updated_at=ctx.clock.now(),
-                )
-                updated += 1
-                continue
-
-            used_slots = {a.slot for a in accounts}
-            free_slot = next((s for s in range(1, 100) if s not in used_slots), None)
-            if free_slot is None:
-                raise UsageError("Account limit reached (maximum 99 accounts).")
-            alias = incoming.alias
-            if alias and _alias_taken(accounts, alias, free_slot):
-                alias = None
-            ctx.vault.write(slot_target(free_slot), blob, incoming.email)
-            accounts.append(
-                dataclasses.replace(
-                    incoming,
-                    slot=free_slot,
-                    alias=alias,
-                    fp=fingerprint(blob),
-                    updated_at=ctx.clock.now(),
-                )
-            )
-            imported += 1
-
-        ctx.store.save(accounts)
+    imported, updated, skipped = plan.imported, plan.updated, plan.skipped
 
     if ctx.json:
         data = {

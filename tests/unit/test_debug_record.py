@@ -463,3 +463,18 @@ def test_record_env_only_keeps_a_plain_agy_version(
 
     env = json.loads((out / "env.json").read_text(encoding="utf-8"))
     assert env["agy_version"] == expected
+
+
+def test_shape_hides_identifier_sized_numbers_but_keeps_quota_figures() -> None:
+    # A 12-digit project number and an epoch timestamp are identifiers, not shape.
+    assert shape({"project": 1071006060591, "at": 1_790_000_000, "big": 4.5e12}) == {
+        "project": "<int:13>",
+        "at": "<int:10>",
+        "big": "<num>",
+    }
+    assert shape({"remaining": 0.5, "count": 999_999_999, "neg": -5, "ok": True}) == {
+        "remaining": 0.5,
+        "count": 999_999_999,
+        "neg": -5,
+        "ok": True,
+    }

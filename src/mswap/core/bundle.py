@@ -67,25 +67,38 @@ def _restrict_windows_acl(path: Path) -> None:
     if not username:
         return
     with contextlib.suppress(Exception):
-        import shutil
         import subprocess
 
-        icacls_bin = shutil.which("icacls") or "icacls"
-        subprocess.run(  # noqa: S603 - setting Windows file ACL permissions
-            [icacls_bin, str(path), "/inheritance:r", "/grant:r", f"{username}:(R,W)"],
+        from mswap.util.systools import run_system
+
+        run_system(
+            ["icacls", str(path), "/inheritance:r", "/grant:r", f"{username}:(R,W)"],
             check=False,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
 
 
-def write_secure_file(path: Path, data: str) -> None:
-    """Write bundle file with owner-only permissions (Windows icacls / POSIX 0600).
+def refuse_existing(path: Path) -> UsageError:
+    """Return the error for an export target that already exists (never overwritten)."""
+    return UsageError(
+        f"{path} already exists.",
+        hint="Choose a new file name, or delete the old file first.",
+    )
 
+
+def write_secure_file(path: Path, data: str) -> None:
+    """Create a new bundle file with owner-only permissions (Windows icacls / POSIX 0600).
+
+    Never overwrites: an existing path (file, directory or symlink) is refused, so a mistyped
+    target can't destroy another file and a failed write can only delete what it created.
     Permissions are applied to the empty file before any content is written.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError as err:
+        raise refuse_existing(path) from err
     try:
         if sys.platform == "win32":
             os.close(fd)

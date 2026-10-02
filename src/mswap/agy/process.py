@@ -11,7 +11,6 @@ import csv
 import ctypes
 import ctypes.wintypes as wt
 import os
-import shutil
 import subprocess
 import sys
 from collections.abc import Callable, Sequence
@@ -19,6 +18,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from mswap.util.systools import run_system
 
 
 class PROCESSENTRY32W(ctypes.Structure):
@@ -119,9 +120,8 @@ def _snapshot_windows() -> list[tuple[int, int, str]]:
 def _snapshot_tasklist() -> list[tuple[int, int, str]]:
     """Fallback process snapshot on Windows using tasklist."""
     try:
-        bin_path = shutil.which("tasklist") or "tasklist"
-        res = subprocess.run(  # noqa: S603 - run system tasklist with static args
-            [bin_path, "/FO", "CSV", "/NH"],
+        res = run_system(
+            ["tasklist", "/FO", "CSV", "/NH"],
             capture_output=True,
             text=True,
             check=False,
@@ -171,10 +171,9 @@ def _snapshot_posix(
 ) -> list[tuple[int, int, str]]:
     """Capture process table via ps on POSIX systems."""
     try:
-        bin_path = shutil.which("ps") or "ps"
-        run_fn = runner or subprocess.run
+        run_fn = runner or run_system
         res = run_fn(
-            [bin_path, "-axo", "pid=,ppid=,comm="],
+            ["ps", "-axo", "pid=,ppid=,comm="],
             capture_output=True,
             text=True,
             check=False,

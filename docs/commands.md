@@ -211,14 +211,17 @@ mswap config get updates.check
 Writes saved accounts to a passphrase-encrypted file (scrypt + AES-256-GCM). Needs the
 optional extra: `uv tool install "mswap[export]"`. The passphrase is asked for twice (12+
 characters) or read from `MSWAP_EXPORT_PASSPHRASE`; it is never taken from the command line.
-Anyone with the file and the passphrase can use those accounts. See the README section
-"Moving Accounts Between Machines".
+Anyone with the file and the passphrase can use those accounts. It never overwrites: if
+`FILE` already exists the command stops with an error (choose a new name or delete the old
+file). See the README section "Moving Accounts Between Machines".
 
 ### `mswap import FILE [--force]`
 
 Restores accounts from a bundle. New emails take the next free slot; emails you already have
 are skipped, unless `--force` is given or your saved login for them is quarantined. It never
-changes the active agy login. Prints `Imported N, updated N, skipped N.`
+changes the active agy login. It works out every slot first, so running out of slots changes
+nothing, and if saving fails part-way the logins it already wrote are removed or restored.
+Prints `Imported N, updated N, skipped N.`
 
 ### `mswap completions powershell|bash|zsh|fish`
 
@@ -265,7 +268,8 @@ if all three fail the command fails and saves nothing. Exit `4` when agy is sign
 
 ### `mswap shim install [--dir DIR] [--force]`
 
-Windows only. Writes `mswap.cmd`, a launcher that runs `python -m mswap`, so Smart App Control
+Windows only. Writes `mswap.cmd`, a launcher that runs `python -P -m mswap` (`-P` keeps the current directory out of Python's
+import path), so Smart App Control
 never sees an unsigned `.exe`. `DIR` defaults to `%USERPROFILE%\.local\bin`. A file there that
 is not an mswap shim is refused unless `--force`, which backs it up to `mswap.cmd.bak`. It
 tells you whether `DIR` is on your PATH.

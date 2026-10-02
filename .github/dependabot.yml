@@ -1,6 +1,14 @@
 version: 2
 updates:
+  # Every third-party action is pinned to a full commit SHA with a "# vX.Y.Z" comment
+  # (docs/security/threat-model.md, tampering). Dependabot rewrites both the SHA and the
+  # comment, so a pin never goes stale silently. Review each bump like any other dependency.
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions-minor-and-patch:
+        update-types: ["minor", "patch"]

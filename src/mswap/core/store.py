@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 import shutil
-import sys
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +14,7 @@ from mswap.agy.paths import data_dir as data_dir
 from mswap.agy.tokens import fingerprint
 from mswap.core.errors import CorruptState
 from mswap.core.models import Account, account_from_json, account_to_json
+from mswap.util.fsx import ensure_private_dir, write_private_text
 
 LIVE_USER = "antigravity"
 
@@ -131,10 +130,7 @@ class AccountStore:
         # If legacy config.json exists, copy to root/client.json and rename legacy to config.v1.bak
         legacy_config = legacy / "config.json"
         if legacy_config.exists():
-            self.root.mkdir(parents=True, exist_ok=True)
-            if sys.platform != "win32":
-                with contextlib.suppress(OSError):
-                    self.root.chmod(0o700)
+            ensure_private_dir(self.root)
             root_client = self.root / "client.json"
             shutil.copy2(legacy_config, root_client)
             legacy_config.replace(legacy / "config.v1.bak")
@@ -181,19 +177,13 @@ class AccountStore:
 
     def save(self, accounts: Sequence[Account]) -> None:
         """Save accounts metadata atomically to accounts.json, sorted by slot."""
-        self.root.mkdir(parents=True, exist_ok=True)
-        if sys.platform != "win32":
-            with contextlib.suppress(OSError):
-                self.root.chmod(0o700)
         target_file = self.root / "accounts.json"
-        tmp_file = target_file.with_suffix(".tmp")
         sorted_accounts = sorted(accounts, key=lambda a: a.slot)
         payload = {
             "schema": 2,
             "accounts": [account_to_json(a) for a in sorted_accounts],
         }
-        tmp_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-        tmp_file.replace(target_file)
+        write_private_text(target_file, json.dumps(payload, indent=2))
 
 
 def live_target() -> str:

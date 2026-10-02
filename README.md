@@ -131,7 +131,7 @@ Learn more in [How It Works](docs/how-it-works.md).
 - **Refuses unknown logins**: `mswap` refuses to overwrite an active agy login that has not been saved, unless you explicitly pass `--force`.
 - **Minimal surface**: `mswap` touches only `gemini:antigravity` and `mswap:*` entries. It never touches Git, GitHub CLI (`gh`), MCP servers, or browser profiles.
 
-Read the complete [Security Policy](docs/security.md).
+Read the complete [Security Policy](docs/security.md) and the [threat model](docs/security/threat-model.md).
 
 ## Platform Support
 

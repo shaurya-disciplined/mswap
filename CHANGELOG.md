@@ -4,6 +4,20 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Security
+
+- Threat model (STRIDE) for assets, trust boundaries and mitigations: `docs/security/threat-model.md` (W7.S1).
+- The agy hook, the Windows scheduled task, the launchd agent, the systemd unit and the `mswap.cmd` shim now start `python -P -m mswap`. Without `-P`, Python put the current directory first on its import path, so a `mswap.py` or `mswap/` in a cloned repository ran as you whenever agy ended a turn there. Run `mswap hook install`, `mswap schedule install` and `mswap shim install` again to update existing installs (W7.S1).
+- OS tools (`schtasks`, `tasklist`, `icacls`, `security`, `ps`, `launchctl`, `systemctl`, `secret-tool`) are resolved from the system directories first, not from the current directory or an early `PATH` entry (W7.S1).
+- The executable path in the hook command, systemd unit and `.cmd` shim is now quoted for its platform: spaces, quotes, `$`, backticks, `%` and newlines can no longer break the command or inject into it (W7.S1).
+- The data directory is created `0700` and every file `0600` on macOS and Linux, whichever component creates them first (before, only some writers did) (W7.S1).
+- `mswap export` never overwrites an existing file, and a failed write can no longer delete one (W7.S1).
+- `mswap import` plans every slot before writing anything and undoes its vault writes if saving fails, so it can't leave orphan logins behind (W7.S1).
+- HTTP is https-only and never follows redirects, so credentials can't be forwarded to another host (W7.S1).
+- Redaction also covers Python-repr dicts and `key=value` bodies; `debug record` reduces identifier-sized numbers (10+ digits) to their length (W7.S1).
+- Installing the agy hook keeps `hooks.json`'s existing permissions (W7.S1).
+- CI: every GitHub Action is pinned to a full commit SHA with a version comment, tag names are passed to scripts through `env:`, Dependabot groups action updates, and tests enforce all of it (W7.S1).
+
 ## [0.9.0rc1] - 2026-10-02
 
 Release candidate for 1.0: portability and polish.

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 import threading
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -16,6 +15,7 @@ from mswap.core.errors import LockTimeout
 from mswap.core.locking import FileLock
 from mswap.core.models import QuotaSnapshot
 from mswap.core.poll_policy import next_backoff
+from mswap.util.fsx import write_private_text
 
 
 @dataclass(slots=True)
@@ -112,15 +112,8 @@ class UsageCache:
         return {"schema": 1, "accounts": {}}
 
     def _write_raw(self, data: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = self.path.with_name(f"{self.path.name}.tmp.{os.getpid()}")
-        try:
-            tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-            tmp_path.replace(self.path)
-        except OSError:
-            with contextlib.suppress(OSError):
-                if tmp_path.exists():
-                    tmp_path.unlink()
+        with contextlib.suppress(OSError):
+            write_private_text(self.path, json.dumps(data, indent=2))
 
     def get(self, fp: str) -> CacheEntry | None:
         """Retrieve cached entry for an account fingerprint, or None if not found."""

@@ -16,6 +16,7 @@ from typing import Any, Literal
 from mswap.core.errors import UsageError
 from mswap.core.policy import Settings as PolicySettings
 from mswap.core.store import data_dir
+from mswap.util.fsx import write_private_text
 
 VALID_STRATEGIES: set[str] = {"best", "consume-first"}
 VALID_FOCUSES: set[str] = {"auto", "gemini", "3p", "both"}
@@ -487,8 +488,7 @@ def set_setting(key: str, raw_val: Any, path: Path | str | None = None) -> Any:
     raw[sec][field_name] = val
 
     toml_text = dump_toml(raw)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(toml_text, encoding="utf-8")
+    write_private_text(p, toml_text)
     return val
 
 
@@ -508,7 +508,7 @@ def unset_setting(key: str, path: Path | str | None = None) -> None:
                 del raw[sec][field_name]
                 if not raw[sec]:
                     del raw[sec]
-                p.write_text(dump_toml(raw), encoding="utf-8")
+                write_private_text(p, dump_toml(raw))
                 return
         allowed = ", ".join(sorted(KNOWN_KEYS.keys()))
         raise UsageError(
@@ -521,7 +521,7 @@ def unset_setting(key: str, path: Path | str | None = None) -> None:
         del raw[sec][field_name]
         if not raw[sec]:
             del raw[sec]
-        p.write_text(dump_toml(raw), encoding="utf-8")
+        write_private_text(p, dump_toml(raw))
 
 
 def list_settings(path: Path | str | None = None) -> list[tuple[str, Any, bool]]:

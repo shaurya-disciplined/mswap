@@ -10,6 +10,7 @@ from collections.abc import Callable
 from typing import Any
 
 from mswap.core.errors import VaultError
+from mswap.util.systools import run_system
 from mswap.vault.base import MAX_BLOB
 
 _VALID_TARGET_CHARS = re.compile(r"^[A-Za-z0-9._:@+-]+$")
@@ -26,7 +27,7 @@ class SecretToolVault:
 
     def __init__(
         self,
-        runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+        runner: Callable[..., subprocess.CompletedProcess[Any]] = run_system,
     ) -> None:
         self._runner = runner
 

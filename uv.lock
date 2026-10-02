@@ -589,6 +589,7 @@ export = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "cryptography" },
     { name = "hypothesis" },
     { name = "mypy" },
     { name = "pytest" },
@@ -602,6 +603,7 @@ provides-extras = ["export"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "cryptography", specifier = ">=43" },
     { name = "hypothesis", specifier = ">=6" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "pytest", specifier = ">=8" },

@@ -36,6 +36,8 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap schedule install|remove|status  background autopilot via Task Scheduler
   mswap log [-n 20]                 show audit trail of switches and autopilot
   mswap config [get|set|unset|path|list] manage settings.toml
+  mswap export FILE [--accounts S]  export accounts to an encrypted bundle
+  mswap import FILE [--force]       import accounts from an encrypted bundle
   mswap doctor [--repair] [--online] diagnose environment and accounts
 """
 
@@ -95,6 +97,14 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import log
 
             return int(log.run(app_ctx, parsed))
+        case "export":
+            from mswap.cli.commands import export_
+
+            return int(export_.run(app_ctx, parsed))
+        case "import":
+            from mswap.cli.commands import import_
+
+            return int(import_.run(app_ctx, parsed))
         case "doctor":
             from mswap.cli.commands import doctor
 

@@ -398,6 +398,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="value to set for the configuration key",
     )
 
+    # export
+    p_export = subparsers.add_parser(
+        "export",
+        parents=[parent],
+        help="export accounts to an encrypted bundle",
+    )
+    p_export.add_argument(
+        "file",
+        metavar="FILE",
+        help="path to write the encrypted bundle to",
+    )
+    p_export.add_argument(
+        "--accounts",
+        default=None,
+        metavar="SEL,...",
+        help="comma-separated list of account selectors to export",
+    )
+
+    # import
+    p_import = subparsers.add_parser(
+        "import",
+        parents=[parent],
+        help="import accounts from an encrypted bundle",
+    )
+    p_import.add_argument(
+        "file",
+        metavar="FILE",
+        help="path to read the encrypted bundle from",
+    )
+    p_import.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="overwrite existing accounts if email matches",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ### Added
 
 - `mswap config [get KEY | set KEY VALUE | unset KEY | path | list]` to read and write `settings.toml` with validated dotted keys, a tiny flat-table TOML writer that preserves unknown keys (comments are not preserved), and `--json` output (W6.S2).
+- Encrypted account export/import (`mswap export FILE [--accounts SEL,...]`, `mswap import FILE [--force]`) using scrypt + AES-256-GCM via the optional `mswap[export]` extra (W6.S1).
 
 ## [0.6.0] - 2026-10-02
 

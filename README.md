@@ -73,10 +73,28 @@ Get two accounts working in under 3 minutes:
 | `mswap disable SELECTOR` | Exclude an account from automatic rotation |
 | `mswap enable SELECTOR` | Re-enable an account for rotation |
 | `mswap remove SELECTOR` | Remove a saved account and its stored vault credential |
+| `mswap export FILE [--accounts SEL,...]` | Write saved accounts to a passphrase-encrypted bundle (needs `mswap[export]`) |
+| `mswap import FILE [--force]` | Restore accounts from a bundle: new emails get the next free slot, existing ones are skipped (`--force` overwrites) |
 | `mswap doctor` | Check environment, vault health, and diagnostics (`--repair` to fix issues) |
 | `mswap --version` | Show version and license information |
 
 Global options: `--json` for machine-readable output, `--no-color` to disable ANSI colors, `--ascii` for plain-text symbols, `-q`/`--quiet` to silence status messages, `-v`/`--verbose` for diagnostics.
+
+## Moving Accounts Between Machines
+
+`mswap export` and `mswap import` carry your saved logins to another computer in one encrypted file. They need the optional crypto package:
+
+```
+uv tool install "mswap[export]"
+mswap export accounts.mswap            # asks for a passphrase twice (12+ characters)
+mswap import accounts.mswap            # on the other machine
+```
+
+- The bundle is encrypted with a key derived from your passphrase (scrypt, then AES-256-GCM). A wrong passphrase or a damaged file is reported as `Wrong passphrase or damaged file.`
+- Anyone with this file AND the passphrase can use these accounts. Delete the file once you have imported it.
+- For scripts, set `MSWAP_EXPORT_PASSPHRASE`; the passphrase is never accepted on the command line, so it stays out of shell history.
+- Import never changes your active agy login. An email you already have is skipped (or replaced when its saved login is quarantined, or with `--force`).
+- `client.json` (the discovered OAuth client) is never exported.
 
 ## Running agy Sessions
 

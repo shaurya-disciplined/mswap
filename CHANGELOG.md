@@ -4,13 +4,27 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
-### Added
+## [1.0.0] - 2026-10-02
+
+The first production release of **mswap**: multi-account switching, real-time quota intelligence, and hands-free autopilot for Google's Antigravity CLI (`agy`).
+
+### 1.0 Highlights
+
+- **Zero runtime dependencies**: Pure Python standard library. Nothing to supply-chain-attack, nothing for Windows Smart App Control to block.
+- **Zero secrets in the repo**: agy's OAuth client is discovered from the user's local agy install. Refresh and access tokens stay in the OS credential store (Windows Credential Manager, macOS Keychain, Linux Secret Service). No plaintext secrets on disk, none in argv, none in logs.
+- **Transactional switching**: Switches are dual-backed up, journaled, and verified before committing. Crash recovery via `mswap doctor --repair` ensures no login is ever lost.
+- **Pool-aware autopilot**: Tracks Antigravity quota across Gemini and Claude/GPT pools over both 5-hour and weekly windows. Switches accounts automatically at turn boundaries via agy's `Stop` hook or background scheduler.
+- **1.x stability guarantee**: Frozen CLI grammar, semantic exit codes, and Schema 1 JSON output protected by automated golden contract guards (`docs/stability.md`).
+- **Comprehensive security review**: Full STRIDE threat model (`docs/security/threat-model.md`), subprocess argument protection, HTTPS-only transport, and owner-only data permissions.
+
+### Added in 1.0
 
 - 1.x stability contract and deprecation policy: `docs/stability.md` (W7.S2).
 - Golden contract snapshots for every command's `--json` output (`tests/golden/json/*.json`) and every command's `--help` definition (`tests/golden/help/*.txt`) (W7.S2).
 - Public contract guard (`tests/integration/test_stability_contract.py`) enforcing intentional schema evolution: fails on contract changes unless overridden with `MSWAP_ALLOW_CONTRACT_CHANGE=1`, and rejects JSON removals or renames without incrementing `jsonout.SCHEMA_VERSION` (W7.S2).
+- Release launch kit: announcement templates for X/Twitter, Reddit, and Hacker News in `.agent/launch/` (W7.S4).
 
-### Security
+### Security in 1.0
 
 - Threat model (STRIDE) for assets, trust boundaries and mitigations: `docs/security/threat-model.md` (W7.S1).
 - The agy hook, the Windows scheduled task, the launchd agent, the systemd unit and the `mswap.cmd` shim now start `python -P -m mswap`. Without `-P`, Python put the current directory first on its import path, so a `mswap.py` or `mswap/` in a cloned repository ran as you whenever agy ended a turn there. Run `mswap hook install`, `mswap schedule install` and `mswap shim install` again to update existing installs (W7.S1).
@@ -23,6 +37,16 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - Redaction also covers Python-repr dicts and `key=value` bodies; `debug record` reduces identifier-sized numbers (10+ digits) to their length (W7.S1).
 - Installing the agy hook keeps `hooks.json`'s existing permissions (W7.S1).
 - CI: every GitHub Action is pinned to a full commit SHA with a version comment, tag names are passed to scripts through `env:`, Dependabot groups action updates, and tests enforce all of it (W7.S1).
+
+### Changes Since 0.1.0 (Full Journey)
+
+- **W1 (Core Engine / v0.2.0)**: Strict error taxonomy with typed exit codes (1–9, 64, 70), Windows Credential Manager integration with 2560-byte limits, account store v2 in `%LOCALAPPDATA%\mswap`, journaled switch engine with crash recovery, OAuth token refresh with client discovery and dead-token quarantine, core account commands (`add`, `remove`, `alias`, `enable`, `disable`, `current`, `--json`), and `mswap doctor` with 10 diagnostic checks and `--repair`.
+- **W2 (Live agy & Public Launch / v0.3.0)**: agy process detection with `--wait` and `--resume` flags, initial documentation, demo tape and walkthrough GIF, demo seed environment, and public GitHub release pipeline with PyPI Trusted Publishing.
+- **W3 (Usage Intelligence / v0.4.0)**: Google Cloud Code Assist API integration, resilient quota fallback parser, adaptive usage cache (`usage.json`), rich `list` rendering with quota bars and plan tags, weekly pace calculation and JSON forecasts, terminal watch dashboard (`mswap watch`), prompt status one-liner (`mswap status`), and prompt integrations.
+- **W4 (Autopilot / v0.5.0)**: Policy engine supporting pool focus (Gemini vs Claude/GPT) and selection strategies (`best`, `consume-first`), foreground auto runner (`mswap auto`), agy `Stop` hook integration (`mswap hook`), Windows Task Scheduler support (`mswap schedule`), and append-only audit event log (`mswap log`).
+- **W5 (Cross-Platform / v0.6.0)**: Native macOS Keychain (`security` CLI) backend, Linux Secret Service (`secret-tool`) backend, headless fallback (`FileVault`), POSIX schedule via launchd and systemd, and cross-OS CI matrix verification.
+- **W6 (Portability & Polish / v0.9.0rc1)**: Passphrase-encrypted backup export/import (`mswap export`/`import` with scrypt + AES-256-GCM), configuration file (`settings.toml` via `mswap config`), shell completions for PowerShell, Bash, Zsh, and Fish, Smart App Control-safe shim (`mswap shim install`), polite daily update notifications, and sanitized diagnostics export (`mswap debug record`).
+- **W7 (v1.0 Production Readiness)**: Formal STRIDE threat model, security hardening across subprocesses, file permissions, and HTTP transport, and frozen 1.x stability contract with automated golden snapshot testing.
 
 ## [0.9.0rc1] - 2026-10-02
 
@@ -118,7 +142,9 @@ Release candidate for 1.0: portability and polish.
 - CI workflow (W0.S4).
 - Community files and templates (W0.S5).
 
-[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.9.0rc1...v1.0.0
+[0.9.0rc1]: https://github.com/shaurya-disciplined/mswap/compare/v0.6.0...v0.9.0rc1
 [0.6.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.3.0...v0.4.0

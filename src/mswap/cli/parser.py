@@ -459,6 +459,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="overwrite existing accounts if email matches",
     )
 
+    # debug
+    p_debug = subparsers.add_parser(
+        "debug",
+        parents=[parent],
+        help="capture secret-free API response shapes for bug reports",
+    )
+    debug_sub = p_debug.add_subparsers(dest="debug_action")
+    p_debug_record = debug_sub.add_parser(
+        "record",
+        parents=[parent],
+        help="save the shape of agy's quota API responses (no tokens, no emails)",
+    )
+    p_debug_record.add_argument(
+        "--out",
+        default=None,
+        metavar="DIR",
+        help="folder to write the capture into (default: debug-<timestamp> in mswap's data dir)",
+    )
+
     # completions
     p_completions = subparsers.add_parser(
         "completions",

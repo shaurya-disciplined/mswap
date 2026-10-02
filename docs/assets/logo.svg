@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 216 72" width="432" height="144" role="img" aria-labelledby="mswap-logo-title">
+  <title id="mswap-logo-title">mswap</title>
+  <defs>
+    <linearGradient id="mswap-streak" gradientUnits="userSpaceOnUse" x1="4" y1="70" x2="212" y2="4">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0"/>
+      <stop offset="0.7" stop-color="#22d3ee" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+  <!-- meteor streak: thin diagonal behind the wordmark, brightest at the head -->
+  <line x1="4" y1="70" x2="208" y2="6" stroke="url(#mswap-streak)" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="210" cy="5" r="3" fill="#22d3ee"/>
+  <!-- wordmark: geometric strokes, so it renders the same without any font installed -->
+  <g fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 52V24M12 36a10 10 0 0 1 20 0V52M32 36a10 10 0 0 1 20 0V52"/>
+    <path d="M85 29C82 22 66 22 66 31C66 39 86 36 86 45C86 54 69 54 66 47"/>
+    <path d="M96 24L106 52L115 30L124 52L134 24"/>
+    <circle cx="152" cy="38" r="12"/>
+    <path d="M164 24V52"/>
+    <path d="M176 24V64"/>
+    <circle cx="188" cy="38" r="12"/>
+  </g>
+</svg>

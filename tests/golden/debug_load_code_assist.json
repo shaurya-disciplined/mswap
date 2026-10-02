@@ -1,0 +1,16 @@
+{
+  "allowedTiers": [
+    {
+      "id": "standard-tier"
+    }
+  ],
+  "cloudaicompanionProject": "<str:15>",
+  "currentTier": {
+    "id": "free-tier",
+    "name": "<str:11>"
+  },
+  "gcpManaged": false,
+  "paidTier": {
+    "id": "g1-pro-tier"
+  }
+}

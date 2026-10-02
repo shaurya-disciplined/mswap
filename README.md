@@ -1,6 +1,8 @@
-# mswap
+<p align="center">
+  <img src="docs/assets/logo.svg" alt="mswap" width="240" />
+</p>
 
-*Unbreakable agy sessions.*
+<p align="center"><em>Unbreakable agy sessions.</em></p>
 
 [![ci](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml/badge.svg)](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/mswap)](https://pypi.org/project/mswap/)
@@ -65,18 +67,29 @@ Get two accounts working in under 3 minutes:
 | Command | Description |
 |---|---|
 | `mswap` / `mswap list` | Display saved accounts, active status, and quota bars (`--refresh` for live API query) |
-| `mswap add` | Save the current active `agy` login to `mswap` |
-| `mswap add --new` | Save the current active account and prepare for another account login |
-| `mswap switch [SELECTOR]` | Switch to account by slot number, email, or alias (rotates if omitted) |
+| `mswap add` | Save the current active `agy` login to `mswap` (`--new` also signs agy out here so you can add another account, `--alias NAME` names it) |
+| `mswap switch [SELECTOR]` | Switch to account by slot number, email, or alias (rotates if omitted; `--wait`, `--resume`, `--force`) |
 | `mswap current` | Display the active account |
 | `mswap alias SELECTOR NAME` | Assign a human-friendly alias to an account (`--clear` to remove) |
 | `mswap disable SELECTOR` | Exclude an account from automatic rotation |
 | `mswap enable SELECTOR` | Re-enable an account for rotation |
 | `mswap remove SELECTOR` | Remove a saved account and its stored vault credential |
+| `mswap status` | Cache-only one-liner for shell prompts, never touches the network ([prompt setup](docs/prompt-integration.md)) |
+| `mswap watch` | Live dashboard with keyboard controls (`q` quit, `r` refresh, `s` next, `1`-`9` switch) |
+| `mswap auto` | Autopilot: switch before a limit stops the work (`--once`, `--dry-run`, `--threshold N`, `--strategy`, `--focus`) |
+| `mswap hook install\|remove\|status` | Run autopilot checks at the end of each agy turn through agy's `Stop` hook |
+| `mswap schedule install\|remove\|status` | Run autopilot in the background (Task Scheduler, launchd or systemd) |
+| `mswap log [-n N]` | Show the audit trail of switches and autopilot decisions |
+| `mswap config [get\|set\|unset\|path\|list]` | Read and write `settings.toml` with validated keys |
 | `mswap export FILE [--accounts SEL,...]` | Write saved accounts to a passphrase-encrypted bundle (needs `mswap[export]`) |
 | `mswap import FILE [--force]` | Restore accounts from a bundle: new emails get the next free slot, existing ones are skipped (`--force` overwrites) |
-| `mswap doctor` | Check environment, vault health, and diagnostics (`--repair` to fix issues) |
+| `mswap completions SHELL` | Print a tab-completion script for PowerShell, bash, zsh or fish ([install](docs/completions.md)) |
+| `mswap shim install` | Windows: write a Smart App Control-safe `mswap.cmd` launcher |
+| `mswap doctor` | Check environment, vault health, and diagnostics (`--repair` to fix issues, `--online` for network checks) |
+| `mswap debug record` | Save secret-free API response shapes to attach to a bug report |
 | `mswap --version` | Show version and license information |
+
+Every flag, example and exit code is in the [command reference](docs/commands.md). Machine-readable output is described in [docs/json-schema.md](docs/json-schema.md).
 
 Global options: `--json` for machine-readable output, `--no-color` to disable ANSI colors, `--ascii` for plain-text symbols, `-q`/`--quiet` to silence status messages, `-v`/`--verbose` for diagnostics.
 
@@ -153,6 +166,14 @@ Yes. macOS Keychain and Linux Secret Service backends are supported experimental
 ## Troubleshooting
 
 If you encounter unexpected warnings or errors, run `mswap doctor` or see the [Troubleshooting Guide](docs/troubleshooting.md).
+
+### Reporting a bug
+
+Run `mswap debug record` and attach the folder it saves to your [GitHub issue](https://github.com/shaurya-disciplined/mswap/issues/new/choose). It holds only the *shape* of agy's quota API responses (every text value is replaced by its length), plus version and OS details. mswap scans the capture before it finishes and deletes it if anything looks like a token or an email, so it is safe to attach. Never paste tokens, credential blobs or `client.json`.
+
+## Updates
+
+`mswap list` and `mswap doctor` print a dim line when a newer version is on PyPI, checked at most once a day. Turn it off with `mswap config set updates.check false` or `MSWAP_NO_UPDATE_CHECK=1`. mswap never upgrades itself; run `uv tool upgrade mswap`.
 
 ---
 

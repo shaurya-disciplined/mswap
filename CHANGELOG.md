@@ -4,8 +4,15 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.9.0rc1] - 2026-10-02
+
+Release candidate for 1.0: portability and polish.
+
 ### Added
 
+- `mswap debug record [--out DIR]` saves shape-only captures of agy's quota summary, `loadCodeAssist` and `fetchAvailableModels` responses plus an `env.json` (versions, OS/arch, vault backend). Every text value becomes `<str:N>`, only a short allow-list of labels is kept, and the files on disk are scanned for tokens, secrets and emails: on any hit the capture is deleted and nothing is saved (W6.S5).
+- Full documentation pass: `docs/commands.md` (every command, flag, example and exit code), `docs/json-schema.md` (the `--json` shape of every command), a complete README commands table, bug-reporting guidance in the README, troubleshooting guide and security notes (W6.S5).
+- Logo (`docs/assets/logo.svg`, dark-mode friendly through `currentColor`) in the README (W6.S5).
 - `mswap completions powershell|bash|zsh|fish` prints a shell completion script generated from the argument parser, with dynamic completion of account selectors (slots, emails and aliases) through a hidden `mswap __complete selectors` that reads `accounts.json` only; install steps in `docs/completions.md` (W6.S3).
 - Polite update check (PyPI JSON, cached 24 h in `update.json`, 3 s timeout, silent on failure) shown as a dim line after human `mswap list` and `mswap doctor`; opt out with `mswap config set updates.check false` or `MSWAP_NO_UPDATE_CHECK=1` (W6.S4).
 - `mswap shim install [--dir DIR] [--force]` writes a Smart App Control-safe `mswap.cmd` that runs `python -m mswap`; `mswap doctor` now points its blocked-launcher warning at it (W6.S4).

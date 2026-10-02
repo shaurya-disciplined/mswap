@@ -41,6 +41,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap import FILE [--force]       import accounts from an encrypted bundle
   mswap completions SHELL           print a completion script (powershell|bash|zsh|fish)
   mswap doctor [--repair] [--online] diagnose environment and accounts
+  mswap debug record [--out DIR]    save secret-free API response shapes for a bug report
 """
 
 
@@ -115,6 +116,10 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import doctor
 
             return int(doctor.run(app_ctx, parsed))
+        case "debug":
+            from mswap.cli.commands import debug
+
+            return int(debug.run(app_ctx, parsed))
         case "config":
             from mswap.cli.commands import config
 

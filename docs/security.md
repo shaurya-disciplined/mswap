@@ -47,6 +47,17 @@
 
 ---
 
+## Bug-Report Captures
+
+`mswap debug record` is built so that a capture can be attached to a public issue:
+
+- It reads the live login in memory to call agy's quota endpoints. It never writes the login anywhere.
+- Each response is reduced to its shape: every text value becomes `<str:N>`, and only a short allow-list of labels (`window`, `bucketId`, `displayName`, `id`, `modelProvider`, `tokenType`, `status`, `reasonCode`) is kept as it is. A kept label that looks like a token or an email is replaced as well.
+- After writing, mswap scans the files on disk for tokens, client secrets, JWTs and anything email-shaped. On any hit it deletes the capture and exits without saving.
+- Server error messages are never recorded, only the HTTP status and an error kind.
+
+---
+
 ## Reporting Vulnerabilities
 
 If you discover a security vulnerability in `mswap`, please report it privately:

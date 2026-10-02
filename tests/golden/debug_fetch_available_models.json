@@ -1,0 +1,37 @@
+{
+  "defaultAgentModelId": "<str:16>",
+  "models": {
+    "claude-3-7-sonnet": {
+      "displayName": "Claude 3.7 Sonnet",
+      "modelProvider": "MODEL_PROVIDER_ANTHROPIC",
+      "quotaInfo": {
+        "remainingFraction": 0.9,
+        "resetTime": "<str:20>"
+      }
+    },
+    "gemini-2.5-flash": {
+      "displayName": "Gemini 2.5 Flash",
+      "modelProvider": "MODEL_PROVIDER_GOOGLE",
+      "quotaInfo": {
+        "remainingFraction": 0.85,
+        "resetTime": "<str:20>"
+      }
+    },
+    "gemini-2.5-pro": {
+      "displayName": "Gemini 2.5 Pro",
+      "modelProvider": "MODEL_PROVIDER_GOOGLE",
+      "quotaInfo": {
+        "remainingFraction": 0.7,
+        "resetTime": "<str:20>"
+      }
+    },
+    "gpt-4o": {
+      "displayName": "GPT-4o",
+      "modelProvider": "MODEL_PROVIDER_OPENAI",
+      "quotaInfo": {
+        "remainingFraction": 0.6,
+        "resetTime": "<str:20>"
+      }
+    }
+  }
+}

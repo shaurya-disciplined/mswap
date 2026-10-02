@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- Account management commands: remove, alias, enable, disable, current, and add --alias (W1.S6).
+- Structured --json output on all commands matching §A17 schema (W1.S6).
 - Dead-login quarantine; automatic re-detection of agy's sign-in client (W1.S5).
 - Crash-safe switching with journal, rollback and recovery; refuses to overwrite an unsaved login (W1.S4).
 

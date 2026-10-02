@@ -15,7 +15,61 @@ from mswap.cli.context import AppContext
 from mswap.core.errors import MswapError, TokenDead
 from mswap.core.models import Account
 from mswap.core.store import find_active, live_target, slot_target
+from mswap.ui import jsonout
 from mswap.ui.render import print_quota
+
+
+def _build_pools(groups: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    if not groups:
+        return []
+    pools_map: dict[str, dict[str, Any]] = {}
+    for g in groups:
+        buckets_raw = g.get("buckets", [])
+        if not isinstance(buckets_raw, list):
+            continue
+        for b in buckets_raw:
+            if not isinstance(b, dict):
+                continue
+            bucket_id = str(b.get("bucketId", ""))
+            key = bucket_id.split("-", 1)[0] if "-" in bucket_id else bucket_id
+            if not key:
+                key = "unknown"
+            if key not in pools_map:
+                if key == "gemini":
+                    name = "Gemini"
+                elif key == "3p":
+                    name = "Claude & GPT"
+                else:
+                    name = str(g.get("displayName", key))
+                pools_map[key] = {
+                    "key": key,
+                    "name": name,
+                    "buckets": [],
+                }
+            rem_raw = b.get("remainingFraction")
+            rem = float(rem_raw) if rem_raw is not None else 0.0
+            reset_at = b.get("resetTime") if rem < 1.0 else None
+            pools_map[key]["buckets"].append(
+                {
+                    "window": str(b.get("window", "")),
+                    "remaining": rem,
+                    "reset_at": reset_at,
+                }
+            )
+    for p in pools_map.values():
+        p["buckets"].sort(
+            key=lambda x: (
+                0 if x["window"] == "5h" else (1 if x["window"] == "weekly" else 2),
+                x["window"],
+            )
+        )
+    return sorted(
+        pools_map.values(),
+        key=lambda p: (
+            0 if p["key"] == "gemini" else (1 if p["key"] == "3p" else 2),
+            p["key"],
+        ),
+    )
 
 
 def run(ctx: AppContext, _args: argparse.Namespace) -> int:
@@ -25,6 +79,10 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
     active: Account | None = find_active(accounts, live)
 
     if not accounts:
+        if ctx.json:
+            empty_data: dict[str, Any] = {"active_slot": None, "accounts": []}
+            print(jsonout.ok("list", empty_data), file=ctx.out)
+            return 0
         print("No accounts saved yet. Sign in to agy, then run `mswap add`.", file=ctx.out)
         return 0
 
@@ -74,13 +132,52 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
     with ThreadPoolExecutor(max_workers=min(8, len(accounts))) as pool:
         results = list(pool.map(fetch, accounts))
 
+    if ctx.json:
+        now_iso = ctx.clock.now().isoformat()
+        accounts_data: list[dict[str, Any]] = []
+        for acc, groups, err in results:
+            is_active = active is not None and acc.slot == active.slot
+            accounts_data.append(
+                {
+                    "slot": acc.slot,
+                    "email": acc.email,
+                    "alias": acc.alias,
+                    "active": is_active,
+                    "disabled": acc.disabled,
+                    "quarantined": (
+                        {
+                            "reason": acc.quarantined.reason,
+                            "at": acc.quarantined.at.isoformat(),
+                        }
+                        if acc.quarantined is not None
+                        else None
+                    ),
+                    "plan": acc.plan,
+                    "usage": {
+                        "fetched_at": now_iso,
+                        "stale": False,
+                        "error": err,
+                        "pools": _build_pools(groups) if err is None else [],
+                    },
+                }
+            )
+        data: dict[str, Any] = {
+            "active_slot": active.slot if active is not None else None,
+            "accounts": accounts_data,
+        }
+        print(jsonout.ok("list", data), file=ctx.out)
+        return 0
+
     header = ctx.theme.bold("mswap") + ctx.theme.dim(" · agy accounts")
     print(header, file=ctx.out)
     for acc, groups, err in results:
         is_active = active is not None and acc.slot == active.slot
-        mark = ctx.theme.accent("▸") if is_active else " "
+        mark = ctx.theme.accent(ctx.theme.glyph_active) if is_active else " "
         tag = ctx.theme.ok(" (active)") if is_active else ""
-        print(f"\n {mark} {ctx.theme.bold(str(acc.slot))}  {acc.email}{tag}", file=ctx.out)
+        alias_str = f"  · alias {acc.alias}" if acc.alias else ""
+        disabled_str = "  · disabled" if acc.disabled else ""
+        slot_str = ctx.theme.bold(str(acc.slot))
+        print(f"\n {mark} {slot_str}  {acc.email}{tag}{alias_str}{disabled_str}", file=ctx.out)
         if err:
             print(f"     {ctx.theme.err('n/a')}  {ctx.theme.dim(err)}", file=ctx.out)
         else:

@@ -14,7 +14,7 @@ import traceback
 from typing import Any
 
 from mswap import __version__
-from mswap.cli.commands import add, list_, switch
+from mswap.cli.commands import add, alias, current, list_, remove, switch, toggle
 from mswap.cli.context import AppContext, get_context
 from mswap.cli.parser import build_parser
 from mswap.core.errors import INTERNAL_ERROR_CODE, MswapError
@@ -24,11 +24,13 @@ from mswap.util.redact import redact
 
 HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
 
-  mswap add            save the account agy is signed in to now
-  mswap add --new      save it, then sign agy out here so you can sign in to another
-  mswap list           all accounts with 5h / weekly quota left
-  mswap switch         rotate to the next account
-  mswap switch N       switch to account N (or an email)
+  mswap add [--new] [--alias NAME]  save the account agy is signed in to now
+  mswap list [--refresh]            all accounts with 5h / weekly quota left
+  mswap switch [SELECTOR]           rotate to the next account or switch to SELECTOR
+  mswap remove SELECTOR [--yes]     remove a saved account
+  mswap alias SELECTOR [NAME]       set or clear (--clear) an account alias
+  mswap disable|enable SELECTOR     disable or enable an account
+  mswap current                     show active account
 """
 
 
@@ -41,7 +43,7 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
 
     args_list = sys.argv[1:] if argv is None else argv
 
-    if not args_list or args_list == ["help"] or args_list in (["-h"], ["--help"]):
+    if args_list == ["help"] or args_list in (["-h"], ["--help"]):
         print(HELP_TEXT)
         return 0
 
@@ -50,6 +52,11 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
         "list": list_.run,
         "ls": list_.run,
         "switch": switch.run,
+        "remove": remove.run,
+        "alias": alias.run,
+        "disable": toggle.run,
+        "enable": toggle.run,
+        "current": current.run,
     }
 
     parsed: argparse.Namespace | None = None
@@ -63,12 +70,16 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
             print(f"mswap {__version__} · not affiliated with Google")
             return 0
 
+        app_ctx = ctx or get_context(parsed)
+
         if not parsed.command:
+            accounts = app_ctx.store.load()
+            if len(accounts) >= 1 or getattr(parsed, "json", False):
+                return int(list_.run(app_ctx, parsed))
             print(HELP_TEXT)
             return 0
 
         cmd_name = str(parsed.command)
-        app_ctx = ctx or get_context(parsed)
         return int(commands[cmd_name](app_ctx, parsed))
 
     except KeyboardInterrupt:

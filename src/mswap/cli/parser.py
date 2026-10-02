@@ -87,6 +87,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=False,
         help="save current account and sign out on this machine",
     )
+    p_add.add_argument(
+        "--alias",
+        default=None,
+        help="human-friendly name for this account",
+    )
 
     # list / ls
     p_list = subparsers.add_parser(
@@ -119,6 +124,64 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="force switch even if unsaved live login is present",
+    )
+
+    # remove
+    p_remove = subparsers.add_parser(
+        "remove",
+        parents=[parent],
+        help="remove a saved account",
+    )
+    p_remove.add_argument("selector", help="slot number, email, or alias")
+    p_remove.add_argument(
+        "--yes",
+        "-y",
+        action="store_true",
+        default=False,
+        help="skip confirmation prompt",
+    )
+
+    # alias
+    p_alias = subparsers.add_parser(
+        "alias",
+        parents=[parent],
+        help="set or clear an account alias",
+    )
+    p_alias.add_argument("selector", help="slot number, email, or alias")
+    p_alias.add_argument(
+        "name",
+        nargs="?",
+        default=None,
+        help="alias name",
+    )
+    p_alias.add_argument(
+        "--clear",
+        action="store_true",
+        default=False,
+        help="clear account alias",
+    )
+
+    # disable
+    p_disable = subparsers.add_parser(
+        "disable",
+        parents=[parent],
+        help="disable account from rotation and autopilot",
+    )
+    p_disable.add_argument("selector", help="slot number, email, or alias")
+
+    # enable
+    p_enable = subparsers.add_parser(
+        "enable",
+        parents=[parent],
+        help="enable a previously disabled account",
+    )
+    p_enable.add_argument("selector", help="slot number, email, or alias")
+
+    # current
+    subparsers.add_parser(
+        "current",
+        parents=[parent],
+        help="show active account",
     )
 
     return parser

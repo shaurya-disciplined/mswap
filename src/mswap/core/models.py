@@ -2,10 +2,39 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+import re
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
+
+from mswap.core.errors import UsageError
+
+ALIAS_REGEX = re.compile(r"^[a-z][a-z0-9-]{0,19}$")
+
+
+def validate_alias(
+    alias: str,
+    accounts: Sequence[Account],
+    exclude_slot: int | None = None,
+) -> None:
+    """Validate alias format and uniqueness across accounts."""
+    if not ALIAS_REGEX.match(alias):
+        raise UsageError(
+            "Invalid alias name.",
+            hint=(
+                "Aliases must start with a lowercase letter, contain only a-z, 0-9, and '-', "
+                "and be at most 20 characters."
+            ),
+        )
+    for a in accounts:
+        if exclude_slot is not None and a.slot == exclude_slot:
+            continue
+        if a.alias is not None and a.alias.lower() == alias.lower():
+            raise UsageError(
+                f"Alias '{alias}' is already in use by account {a.slot}.",
+                hint="Choose a unique alias.",
+            )
 
 
 @dataclass(frozen=True, slots=True)

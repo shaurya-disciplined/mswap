@@ -189,8 +189,32 @@ def switch(
     return SwitchResult("switched", active, target, agy_running=False)
 
 
+def sign_out_live(ctx: SwitchContext) -> None:
+    """Sign agy out on this machine by deleting live credential and journaling."""
+    with ctx.lock(timeout=10.0):
+        live = ctx.vault.read(live_target())
+        if live is None:
+            return
+        live_fprint = fp_or_none(live)
+        ctx.journal.begin(
+            op="sign_out",
+            from_fp=live_fprint,
+            to_fp=None,
+            live_fp=live_fprint,
+        )
+        try:
+            ctx.vault.write(backup_last(), live, LIVE_USER)
+            ctx.vault.delete(live_target())
+        except Exception:
+            ctx.vault.write(live_target(), live, LIVE_USER)
+            ctx.journal.fail()
+            raise
+        ctx.journal.commit()
+        ctx.events.emit("sign_out", from_fp=live_fprint)
+
+
 def recover(ctx: SwitchContext) -> str | None:
-    """Recover an interrupted switch transaction per §A7 rules.
+    """Recover an interrupted switch or sign-out transaction per §A7 rules.
 
     Returns a human sentence describing what action was taken, or None if nothing to do.
     """
@@ -203,6 +227,31 @@ def recover(ctx: SwitchContext) -> str | None:
         live_fp = fp_or_none(live)
         to_fp = st.get("to_fp")
         saved_live_fp = st.get("live_fp")
+        op = st.get("op", "switch")
+
+        if op == "sign_out":
+            if live_fp is None:
+                ctx.journal.commit()
+                return "Recovered from interrupted sign-out: sign-out had completed."
+
+            if live_fp == saved_live_fp:
+                ctx.journal.fail()
+                return (
+                    "Recovered from interrupted sign-out: "
+                    "sign-out never happened and was marked failed."
+                )
+
+            backup = ctx.vault.read(backup_last())
+            backup_fp = fp_or_none(backup)
+            if backup is not None and backup_fp == saved_live_fp:
+                ctx.vault.write(live_target(), backup, LIVE_USER)
+                ctx.journal.fail()
+                return "Recovered from interrupted sign-out: restored previous login from backup."
+
+            raise CorruptState(
+                "An interrupted sign-out transaction could not be safely recovered.",
+                hint="Check your agy login and run `mswap add`.",
+            )
 
         if live_fp is not None and live_fp == to_fp:
             ctx.journal.commit()

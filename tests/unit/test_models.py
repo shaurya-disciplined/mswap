@@ -172,3 +172,69 @@ def test_account_from_json_with_datetime_and_quarantine_objects() -> None:
     assert acc.updated_at.tzinfo is not None
     assert acc.quarantined == q
     assert acc.extra.get("nested_extra") is True
+
+
+def test_validate_alias_valid() -> None:
+    from mswap.core.models import validate_alias
+
+    now = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+    accounts = [Account(slot=1, email="a@example.com", fp="fp1", added_at=now, updated_at=now)]
+    # Valid aliases should not raise
+    for valid in ("a", "work", "a-b", "account-1234567890", "x123", "a" * 20):
+        validate_alias(valid, accounts)
+
+
+def test_validate_alias_invalid_patterns() -> None:
+    from mswap.core.errors import UsageError
+    from mswap.core.models import validate_alias
+
+    accounts: list[Account] = []
+    invalid_patterns = (
+        "",
+        "1work",
+        "-work",
+        "Work",
+        "work_1",
+        "a" * 21,
+        "hello world",
+        "test@foo",
+    )
+    for invalid in invalid_patterns:
+        with pytest.raises(UsageError) as exc_info:
+            validate_alias(invalid, accounts)
+        assert exc_info.value.code == 64
+        assert "Invalid alias name." in exc_info.value.message
+
+
+def test_validate_alias_uniqueness() -> None:
+    from mswap.core.errors import UsageError
+    from mswap.core.models import validate_alias
+
+    now = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+    accounts = [
+        Account(
+            slot=1,
+            email="a@example.com",
+            fp="fp1",
+            added_at=now,
+            updated_at=now,
+            alias="primary",
+        ),
+        Account(
+            slot=2,
+            email="b@example.com",
+            fp="fp2",
+            added_at=now,
+            updated_at=now,
+            alias="secondary",
+        ),
+    ]
+
+    # Updating account 1 to its own alias should pass when exclude_slot=1
+    validate_alias("primary", accounts, exclude_slot=1)
+
+    # Reusing account 1's alias for account 2 should fail
+    with pytest.raises(UsageError) as exc_info:
+        validate_alias("primary", accounts, exclude_slot=2)
+    assert exc_info.value.code == 64
+    assert "Alias 'primary' is already in use by account 1." in exc_info.value.message

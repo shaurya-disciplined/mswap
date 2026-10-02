@@ -512,3 +512,115 @@ def test_cli_switch_command(ctx: AppContext) -> None:
     assert rc_rec == 0
     err_rec = ctx.err.getvalue() if isinstance(ctx.err, StringIO) else ""
     assert "Recovered from interrupted switch" in err_rec
+
+
+def test_sign_out_live_happy_path(ctx: AppContext) -> None:
+    from mswap.core.switcher import sign_out_live
+
+    blob1 = make_blob(1)
+    ctx.vault.write(live_target(), blob1, "antigravity")
+
+    sign_out_live(ctx)
+
+    assert ctx.vault.read(live_target()) is None
+    assert ctx.vault.read(backup_last()) == blob1
+
+    st = ctx.journal.state()
+    assert st is not None
+    assert st["op"] == "sign_out"
+    assert st["state"] == "committed"
+
+    events_path = ctx.events.path
+    assert events_path.exists()
+    lines = events_path.read_text(encoding="utf-8").strip().splitlines()
+    assert any(json.loads(line).get("event") == "sign_out" for line in lines)
+
+
+def test_sign_out_live_when_none(ctx: AppContext) -> None:
+    from mswap.core.switcher import sign_out_live
+
+    assert ctx.vault.read(live_target()) is None
+    sign_out_live(ctx)
+    assert ctx.vault.read(live_target()) is None
+    assert ctx.journal.state() is None
+
+
+def test_sign_out_live_failure_rollback(ctx: AppContext) -> None:
+    from mswap.core.switcher import sign_out_live
+
+    blob1 = make_blob(1)
+    ctx.vault.write(live_target(), blob1, "antigravity")
+
+    def fail_delete(target: str) -> bool:
+        raise RuntimeError("Delete failed")
+
+    ctx.vault.delete = fail_delete  # type: ignore[assignment]
+
+    with pytest.raises(RuntimeError, match="Delete failed"):
+        sign_out_live(ctx)
+
+    assert ctx.vault.read(live_target()) == blob1
+    st = ctx.journal.state()
+    assert st is not None
+    assert st["state"] == "failed"
+
+
+def test_recover_sign_out_completed(ctx: AppContext) -> None:
+    blob1 = make_blob(1)
+    fp1 = fingerprint(blob1)
+    ctx.journal.begin("sign_out", from_fp=fp1, to_fp=None, live_fp=fp1)
+    # live is None (sign_out deleted it)
+    assert ctx.vault.read(live_target()) is None
+
+    msg = recover(ctx)
+    assert msg == "Recovered from interrupted sign-out: sign-out had completed."
+    st = ctx.journal.state()
+    assert st is not None
+    assert st["state"] == "committed"
+
+
+def test_recover_sign_out_never_happened(ctx: AppContext) -> None:
+    blob1 = make_blob(1)
+    fp1 = fingerprint(blob1)
+    ctx.vault.write(live_target(), blob1, "antigravity")
+    ctx.journal.begin("sign_out", from_fp=fp1, to_fp=None, live_fp=fp1)
+
+    msg = recover(ctx)
+    assert (
+        msg == "Recovered from interrupted sign-out: sign-out never happened and was marked failed."
+    )
+    st = ctx.journal.state()
+    assert st is not None
+    assert st["state"] == "failed"
+
+
+def test_recover_sign_out_restored_from_backup(ctx: AppContext) -> None:
+    blob1 = make_blob(1)
+    blob2 = make_blob(2)
+    fp1 = fingerprint(blob1)
+    # live has something else, but backup_last has blob1
+    ctx.vault.write(live_target(), blob2, "antigravity")
+    ctx.vault.write(backup_last(), blob1, "antigravity")
+    ctx.journal.begin("sign_out", from_fp=fp1, to_fp=None, live_fp=fp1)
+
+    msg = recover(ctx)
+    assert msg == "Recovered from interrupted sign-out: restored previous login from backup."
+    assert ctx.vault.read(live_target()) == blob1
+    st = ctx.journal.state()
+    assert st is not None
+    assert st["state"] == "failed"
+
+
+def test_recover_sign_out_corrupt_state(ctx: AppContext) -> None:
+    blob1 = make_blob(1)
+    blob2 = make_blob(2)
+    blob3 = make_blob(3)
+    fp1 = fingerprint(blob1)
+    ctx.vault.write(live_target(), blob2, "antigravity")
+    ctx.vault.write(backup_last(), blob3, "antigravity")
+    ctx.journal.begin("sign_out", from_fp=fp1, to_fp=None, live_fp=fp1)
+
+    with pytest.raises(CorruptState) as exc_info:
+        recover(ctx)
+    expected_msg = "An interrupted sign-out transaction could not be safely recovered."
+    assert expected_msg in exc_info.value.message

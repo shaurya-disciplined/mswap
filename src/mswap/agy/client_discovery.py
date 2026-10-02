@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 import mmap
-import os
 import re
 import subprocess
 from pathlib import Path
 from typing import Any
 
-from mswap.agy.paths import agy_exe
+from mswap.agy.paths import agy_exe, data_dir
 from mswap.core.errors import MswapError
 
 CLIENT_ID_RE = rb"1071006060591-[a-z0-9]{32}\.apps\.googleusercontent\.com"
@@ -18,8 +17,13 @@ SECRET_RE = rb"GOCSPX-[A-Za-z0-9_-]{28}"
 
 
 def _config_file() -> Path:
-    home = Path(os.environ["MSWAP_HOME"]) if "MSWAP_HOME" in os.environ else Path.home() / ".mswap"
-    return home / "config.json"
+    client_path = data_dir() / "client.json"
+    if client_path.exists():
+        return client_path
+    legacy_path = data_dir() / "config.json"
+    if legacy_path.exists():
+        return legacy_path
+    return client_path
 
 
 def _exe_sig(exe: Path) -> str:

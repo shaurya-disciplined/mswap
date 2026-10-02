@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
             return 0
 
         cmd_name = str(parsed.command)
-        app_ctx = ctx or get_context()
+        app_ctx = ctx or get_context(parsed)
         return int(commands[cmd_name](app_ctx, parsed))
 
     except KeyboardInterrupt:

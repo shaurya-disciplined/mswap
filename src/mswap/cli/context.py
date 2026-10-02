@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
+import argparse
+import dataclasses
+import os
+import sys
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import TextIO
 
+from mswap.core.store import AccountStore, data_dir
+from mswap.ui.theme import Theme, theme_from
 from mswap.util.clock import Clock, SystemClock
 from mswap.util.http import Http, UrllibHttp
 from mswap.vault import get_vault
@@ -17,25 +25,72 @@ class AppContext:
     vault: Vault
     http: Http
     clock: Clock
+    store: AccountStore
+    env: Mapping[str, str]
+    out: TextIO
+    err: TextIO
+    theme: Theme
+    json: bool
+    quiet: bool
 
 
 _ACTIVE_CONTEXT: AppContext | None = None
 
 
-def default_context() -> AppContext:
-    """Create the production application context."""
+def default_context(args: argparse.Namespace | None = None) -> AppContext:
+    """Create the default application context based on CLI arguments and environment."""
+    env = os.environ
+    no_color = getattr(args, "no_color", False) if args is not None else False
+    ascii_flag = getattr(args, "ascii", False) if args is not None else False
+    is_json = getattr(args, "json", False) if args is not None else False
+    quiet = getattr(args, "quiet", False) if args is not None else False
+    theme = theme_from(
+        env,
+        no_color_flag=no_color,
+        ascii_flag=ascii_flag,
+        isatty=sys.stdout.isatty(),
+    )
     return AppContext(
         vault=get_vault(),
         http=UrllibHttp(),
         clock=SystemClock(),
+        store=AccountStore(data_dir()),
+        env=env,
+        out=sys.stdout,
+        err=sys.stderr,
+        theme=theme,
+        json=is_json,
+        quiet=quiet,
     )
 
 
-def get_context() -> AppContext:
+def get_context(args: argparse.Namespace | None = None) -> AppContext:
     """Return the active or default application context."""
     if _ACTIVE_CONTEXT is not None:
-        return _ACTIVE_CONTEXT
-    return default_context()
+        from io import StringIO
+
+        out = _ACTIVE_CONTEXT.out if isinstance(_ACTIVE_CONTEXT.out, StringIO) else sys.stdout
+        err = _ACTIVE_CONTEXT.err if isinstance(_ACTIVE_CONTEXT.err, StringIO) else sys.stderr
+
+        no_color = getattr(args, "no_color", False) if args is not None else False
+        ascii_flag = getattr(args, "ascii", False) if args is not None else False
+        is_json = getattr(args, "json", False) if args is not None else False
+        quiet = getattr(args, "quiet", False) if args is not None else False
+        theme = theme_from(
+            _ACTIVE_CONTEXT.env,
+            no_color_flag=no_color,
+            ascii_flag=ascii_flag,
+            isatty=out.isatty() if hasattr(out, "isatty") else False,
+        )
+        return dataclasses.replace(
+            _ACTIVE_CONTEXT,
+            out=out,
+            err=err,
+            theme=theme,
+            json=is_json,
+            quiet=quiet,
+        )
+    return default_context(args)
 
 
 def set_context(ctx: AppContext | None) -> None:

@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Changed
 
+- Data moves to %LOCALAPPDATA%\mswap with automatic, non-destructive migration (W1.S3).
 - Errors now have exit codes and hints; --json errors (W1.S1).
 
 ### Fixed

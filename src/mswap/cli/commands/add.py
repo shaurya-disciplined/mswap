@@ -3,73 +3,82 @@
 from __future__ import annotations
 
 import argparse
+import dataclasses
 
 from mswap.agy.api import whoami
 from mswap.agy.tokens import ensure_fresh, fingerprint
 from mswap.cli.context import AppContext
 from mswap.core.errors import NotSignedIn
+from mswap.core.models import Account
 from mswap.core.store import (
     LIVE_USER,
     backup_last,
     backup_original,
     live_target,
-    load_accounts,
-    save_accounts,
     slot_target,
 )
-from mswap.ui.theme import bold, cyan, dim, green
 
 
-def run(ctx: AppContext, args: list[str] | argparse.Namespace) -> int:
+def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the add command."""
-    new = getattr(args, "new", False) if not isinstance(args, list) else ("--new" in args)
+    new = getattr(args, "new", False) if isinstance(args, argparse.Namespace) else ("--new" in args)
     blob = ctx.vault.read(live_target())
     if not blob:
         raise NotSignedIn("agy isn't signed in.", hint="Run `agy`, sign in, then try again.")
 
     token, _ = ensure_fresh(blob, ctx.http, ctx.clock.now())
     email = whoami(token, ctx.http)
-    accounts = load_accounts()
-    existing = next((a for a in accounts if a["email"].lower() == email.lower()), None)
+    accounts = ctx.store.load()
+    existing = next((a for a in accounts if a.email.lower() == email.lower()), None)
 
     # Backup original once
     if ctx.vault.read(backup_original()) is None:
         ctx.vault.write(backup_original(), blob, LIVE_USER)
 
+    now = ctx.clock.now()
     if existing:
-        slot = int(existing["slot"])
-        existing["fp"] = fingerprint(blob)
+        slot = existing.slot
+        idx = accounts.index(existing)
+        accounts[idx] = dataclasses.replace(
+            existing,
+            fp=fingerprint(blob),
+            updated_at=now,
+        )
         verb = "Updated"
     else:
-        slot = max((int(a["slot"]) for a in accounts), default=0) + 1
+        slot = max((a.slot for a in accounts), default=0) + 1
         accounts.append(
-            {
-                "slot": slot,
-                "email": email,
-                "fp": fingerprint(blob),
-                "added_at": ctx.clock.now().isoformat(timespec="seconds"),
-            }
+            Account(
+                slot=slot,
+                email=email,
+                fp=fingerprint(blob),
+                added_at=now,
+                updated_at=now,
+            )
         )
         verb = "Added"
 
     ctx.vault.write(slot_target(slot), blob, email)
-    save_accounts(accounts)
-    print(f"{green('✓')} {verb} account {bold(str(slot))}: {email}")
+    ctx.store.save(accounts)
+    ok_mark = ctx.theme.ok("✓")
+    slot_str = ctx.theme.bold(str(slot))
+    print(f"{ok_mark} {verb} account {slot_str}: {email}", file=ctx.out)
 
     if new:
         ctx.vault.write(backup_last(), blob, LIVE_USER)
         ctx.vault.delete(live_target())
-        print(f"{green('✓')} Signed agy out on this PC only (the saved copy stays valid).")
+        signed_out_msg = f"{ok_mark} Signed agy out on this PC only (the saved copy stays valid)."
+        print(signed_out_msg, file=ctx.out)
         sign_in_hint = (
-            f"  Now run {cyan('agy')}, sign in with the next Google account, "
-            f"then run {cyan('mswap add')}."
+            f"  Now run {ctx.theme.accent('agy')}, sign in with the next Google account, "
+            f"then run {ctx.theme.accent('mswap add')}."
         )
-        print(sign_in_hint)
+        print(sign_in_hint, file=ctx.out)
     else:
         warn_hint = (
             "  To add another: `mswap add --new`. "
             "Don't use agy's /logout, it can revoke saved logins."
         )
-        print(dim(warn_hint))
+        print(ctx.theme.dim(warn_hint), file=ctx.out)
 
     return 0

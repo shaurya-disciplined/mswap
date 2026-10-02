@@ -3,13 +3,19 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from collections.abc import Generator
 from datetime import UTC, datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from mswap.cli.context import AppContext, set_context
+from mswap.core.store import AccountStore
+from mswap.ui.theme import Theme
 from mswap.util.clock import FrozenClock
 from mswap.util.http import FakeHttp
 from mswap.vault.memory import MemoryVault
@@ -43,6 +49,7 @@ def _session_safety_guard() -> Generator[None, None, None]:
 def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None, None, None]:
     """Isolate environment variables for every test."""
     monkeypatch.setenv("MSWAP_HOME", str(tmp_path / "home"))
+    monkeypatch.setenv("MSWAP_LEGACY_HOME", str(tmp_path / "legacy"))
     monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
     monkeypatch.setenv("MSWAP_VAULT_PREFIX", "mswaptest:")
     monkeypatch.setenv("MSWAP_VAULT", "memory")
@@ -109,14 +116,42 @@ def clock() -> FrozenClock:
     return FrozenClock(datetime(2026, 10, 2, 12, 0, tzinfo=UTC))
 
 
+@pytest.fixture
+def ctx(vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path) -> AppContext:
+    """Provide an isolated AppContext with in-memory streams and no-colour Theme."""
+    store = AccountStore(tmp_path / "home")
+    return AppContext(
+        vault=vault,
+        http=http,
+        clock=clock,
+        store=store,
+        env=dict(os.environ),
+        out=StringIO(),
+        err=StringIO(),
+        theme=Theme(color=False),
+        json=False,
+        quiet=False,
+    )
+
+
 @pytest.fixture(autouse=True)
 def _inject_test_context(
-    vault: MemoryVault, http: FakeHttp, clock: FrozenClock
+    vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path
 ) -> Generator[None, None, None]:
     """Inject test context into cli context."""
-    from mswap.cli.context import AppContext, set_context
-
-    ctx = AppContext(vault=vault, http=http, clock=clock)
-    set_context(ctx)
+    store = AccountStore(tmp_path / "home")
+    app_ctx = AppContext(
+        vault=vault,
+        http=http,
+        clock=clock,
+        store=store,
+        env=dict(os.environ),
+        out=sys.stdout,
+        err=sys.stderr,
+        theme=Theme(color=False),
+        json=False,
+        quiet=False,
+    )
+    set_context(app_ctx)
     yield
     set_context(None)

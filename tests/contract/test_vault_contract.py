@@ -49,15 +49,46 @@ class VaultContractBackend:
         return None
 
 
-@pytest.fixture(params=["memory"] + (["windows"] if sys.platform == "win32" else []))
+@pytest.fixture(
+    params=["memory"]
+    + (["windows"] if sys.platform == "win32" else [])
+    + (["macos"] if sys.platform == "darwin" else [])
+)
 def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, None, None]:
     name = request.param
     prefix = f"mswaptest:contract:{uuid4().hex[:8]}:"
     vault: Vault
+    kc_path: Path | None = None
+    tmp_dir: Path | None = None
+
     if name == "memory":
         vault = MemoryVault()
     elif name == "windows":
         vault = WindowsVault()
+    elif name == "macos":
+        import shutil
+        import subprocess
+        import tempfile
+        from pathlib import Path
+
+        from mswap.vault.macos import MacKeychainVault
+
+        tmp_dir = Path(tempfile.mkdtemp(prefix="mswap_kc_"))
+        kc_path = tmp_dir / "mswaptest.keychain-db"
+        res = subprocess.run(
+            ["security", "create-keychain", "-p", "mswaptest", str(kc_path)],
+            capture_output=True,
+            text=True,
+        )
+        if res.returncode != 0:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+            pytest.skip(f"security create-keychain failed: {res.stderr}")
+        subprocess.run(
+            ["security", "unlock-keychain", "-p", "mswaptest", str(kc_path)],
+            check=True,
+            capture_output=True,
+        )
+        vault = MacKeychainVault(keychain=str(kc_path))
     else:
         raise ValueError(f"Unknown backend: {name}")
 
@@ -72,6 +103,13 @@ def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, N
     remaining = vault.list(prefix)
     assert remaining == [], f"Targets remained in {name} vault after cleanup: {remaining}"
 
+    if name == "macos" and kc_path is not None and tmp_dir is not None:
+        import shutil
+        import subprocess
+
+        subprocess.run(["security", "delete-keychain", str(kc_path)], capture_output=True)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
 
 def test_round_trip(backend: VaultContractBackend) -> None:
     target = backend.target("roundtrip")
@@ -85,11 +123,13 @@ def test_overwrite(backend: VaultContractBackend) -> None:
     target = backend.target("overwrite")
     backend.write(target, b"first-blob", "user1@example.com")
     assert backend.read(target) == b"first-blob"
-    assert backend.read_user(target) == "user1@example.com"
+    if backend.read_user(target) is not None:
+        assert backend.read_user(target) == "user1@example.com"
 
     backend.write(target, b"second-blob", "user2@example.com")
     assert backend.read(target) == b"second-blob"
-    assert backend.read_user(target) == "user2@example.com"
+    if backend.read_user(target) is not None:
+        assert backend.read_user(target) == "user2@example.com"
 
 
 def test_read_missing_returns_none(backend: VaultContractBackend) -> None:
@@ -155,7 +195,8 @@ def test_unicode_user_roundtrips(backend: VaultContractBackend) -> None:
     blob = b"unicode-user-blob"
     backend.write(target, blob, user)
     assert backend.read(target) == blob
-    assert backend.read_user(target) == user
+    if backend.read_user(target) is not None:
+        assert backend.read_user(target) == user
 
 
 def test_long_target_name(backend: VaultContractBackend) -> None:

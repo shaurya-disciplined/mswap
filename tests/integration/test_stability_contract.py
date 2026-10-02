@@ -425,7 +425,8 @@ def _setup_debug(ctx: AppContext) -> None:
 
 
 def _setup_shim(ctx: AppContext) -> None:
-    del ctx
+    ctx.env["MSWAP_TEST_FORCE_WINDOWS"] = "1"
+    os.environ["MSWAP_TEST_FORCE_WINDOWS"] = "1"
 
 
 # (golden name, setup, argv template with {tmp} for a scratch dir, expected exit code)
@@ -470,7 +471,11 @@ def _normalise(value: Any, scrubs: list[str]) -> Any:
     if isinstance(value, list):
         return [_normalise(v, scrubs) for v in value]
     if isinstance(value, str):
-        text = value.replace(sys.executable, "<PYTHON>")
+        text = value
+        for q in (f'"{sys.executable}"', f"'{sys.executable}'", sys.executable):
+            if q in text:
+                text = text.replace(q, '"<PYTHON>"')
+                break
         for scrub in scrubs:
             text = text.replace(scrub, "<TMP>")
         if "<TMP>" in text:

@@ -1,10 +1,11 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 
 Write-Host "Installing mswap..."
 
 if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "Installing uv..."
     irm https://astral.sh/uv/install.ps1 | iex
+    $env:Path = "$env:USERPROFILE\.local\bin;$env:USERPROFILE\.cargo\bin;" + $env:Path
 }
 
 Write-Host "Installing mswap from GitHub..."
@@ -22,10 +23,12 @@ if (-not $latest) {
     $latest = "main"
 }
 
-uv tool install "git+https://github.com/shaurya-disciplined/mswap@$latest"
+uv tool install --force "git+https://github.com/shaurya-disciplined/mswap@$latest"
 
 Write-Host "Installing mswap.cmd shim..."
-mswap shim install
+$uvToolDir = uv tool dir
+& "$uvToolDir\mswap\Scripts\python.exe" -m mswap shim install
+$env:Path = "$env:USERPROFILE\.local\bin;" + $env:Path
 
 Write-Host "mswap installed successfully!"
 Write-Host "Next steps:"

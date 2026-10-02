@@ -17,7 +17,7 @@ from mswap.agy.paths import agy_exe
 from mswap.agy.tokens import TokenService
 from mswap.core.errors import ApiError, MswapError, TokenDead
 from mswap.core.models import Account
-from mswap.core.poll_policy import is_stale
+from mswap.core.poll_policy import NEAR_LIMIT, is_stale
 from mswap.core.store import AccountStore, find_active, live_target, slot_target
 from mswap.core.usage_cache import CacheEntry, UsageCache
 from mswap.util.clock import Clock
@@ -133,7 +133,12 @@ def refresh_usage(
             return acc.slot, cached, None
 
         # Check staleness
-        stale = is_stale(cached, now, active=is_active)
+        near_limit = False
+        if cached and cached.snapshot:
+            near_limit = any(
+                b.remaining < NEAR_LIMIT for p in cached.snapshot.pools for b in p.buckets
+            )
+        stale = is_stale(cached, now, active=is_active, near_limit=near_limit)
         if not force and not stale:
             assert cached is not None
             return acc.slot, cached, None

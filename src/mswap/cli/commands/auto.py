@@ -19,7 +19,7 @@ from mswap.core.errors import UsageError
 from mswap.core.identity import find_by_fp
 from mswap.core.policy import Decision, _normalize_dt
 from mswap.core.policy import Settings as PolicySettings
-from mswap.core.poll_policy import is_stale
+from mswap.core.poll_policy import NEAR_LIMIT, is_stale
 from mswap.core.settings import load_settings
 from mswap.core.store import find_active, live_target
 from mswap.core.usage_cache import UsageCache
@@ -276,7 +276,12 @@ def _run_from_hook(
             if cached.backoff_until is not None and now_dt < cached.backoff_until:
                 continue
             is_active = active_acc is not None and acc.slot == active_acc.slot
-            if is_stale(cached, now_dt, active=is_active):
+            near_limit = False
+            if cached.snapshot:
+                near_limit = any(
+                    b.remaining < NEAR_LIMIT for p in cached.snapshot.pools for b in p.buckets
+                )
+            if is_stale(cached, now_dt, active=is_active, near_limit=near_limit):
                 fetch_needed = True
                 break
 

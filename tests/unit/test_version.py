@@ -16,12 +16,12 @@ def test_main_version_flag(capsys: pytest.CaptureFixture[str]) -> None:
     rc = main(["--version"])
     assert rc == 0
     captured = capsys.readouterr()
-    assert captured.out == "mswap 1.0.0 · not affiliated with Google\n"
+    assert captured.out == "mswap 1.0.0 (agy not found) · not affiliated with Google\n"
 
     rc_short = main(["-V"])
     assert rc_short == 0
     captured_short = capsys.readouterr()
-    assert captured_short.out == "mswap 1.0.0 · not affiliated with Google\n"
+    assert captured_short.out == "mswap 1.0.0 (agy not found) · not affiliated with Google\n"
 
 
 def test_main_unknown_command_returns_64(capsys: pytest.CaptureFixture[str]) -> None:

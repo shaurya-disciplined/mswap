@@ -226,28 +226,41 @@ class SecretToolVault:
 
         cmd = ["secret-tool", "search", "--all", "mswap", "1"]
         res = self._run(cmd)
+
+        results: list[str] = []
         if res.returncode == 1 and not res.stdout and not res.stderr:
-            return []
-        if res.returncode != 0:
+            results = []
+        elif res.returncode != 0:
             err = (
                 res.stderr.decode("utf-8", errors="replace").strip()
                 if res.stderr
                 else f"exit code {res.returncode}"
             )
             raise VaultError(f"Linux Secret Service error searching: {err}")
+        else:
+            stdout = (
+                res.stdout.decode("utf-8", errors="replace")
+                if isinstance(res.stdout, bytes)
+                else str(res.stdout or "")
+            )
+            stderr = (
+                res.stderr.decode("utf-8", errors="replace")
+                if isinstance(res.stderr, bytes)
+                else str(res.stderr or "")
+            )
+            combined = stdout + "\n" + stderr
+            results = _parse_search_output(combined, prefix)
 
-        stdout = (
-            res.stdout.decode("utf-8", errors="replace")
-            if isinstance(res.stdout, bytes)
-            else str(res.stdout or "")
-        )
-        stderr = (
-            res.stderr.decode("utf-8", errors="replace")
-            if isinstance(res.stderr, bytes)
-            else str(res.stderr or "")
-        )
-        combined = stdout + "\n" + stderr
-        return _parse_search_output(combined, prefix)
+        live_tgt = self._live_target()
+        if (
+            live_tgt.startswith(prefix)
+            and live_tgt not in results
+            and self._read_raw(live_tgt) is not None
+        ):
+            results.append(live_tgt)
+            results.sort()
+
+        return results
 
 
 def _parse_search_output(output: str, prefix: str) -> list[str]:

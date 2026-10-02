@@ -450,3 +450,30 @@ def test_get_vault_linux_acknowledged(
     assert isinstance(v, SecretToolVault)
     captured = capsys.readouterr()
     assert captured.err == ""
+
+
+def test_list_includes_live_target(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswap:live")
+    runner = FakeRunner()
+
+    # 1. First call: secret-tool search (finds nothing)
+    runner.responses.append(FakeProcess(1, b"", b""))
+
+    # 2. Second call: secret-tool lookup (finds the live target)
+    runner.responses.append(FakeProcess(0, b"go-keyring-base64:...", b""))
+
+    vault = SecretToolVault(runner=runner)
+    assert vault.list("mswap:") == ["mswap:live"]
+
+
+def test_list_does_not_include_live_target_if_prefix_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("MSWAP_LIVE_TARGET", "gemini:antigravity")
+    runner = FakeRunner()
+
+    # 1. secret-tool search (finds nothing)
+    runner.responses.append(FakeProcess(1, b"", b""))
+
+    vault = SecretToolVault(runner=runner)
+    assert vault.list("mswap:") == []

@@ -110,31 +110,7 @@ class MacKeychainVault:
             raise VaultError(f"Credential is too large ({len(blob)} bytes, max {MAX_BLOB}).")
         svc, acct = self.split(target)
 
-        live_tgt = os.environ.get("MSWAP_LIVE_TARGET", "gemini:antigravity")
-        is_live = target == live_tgt
-
-        if is_live:
-            existing_raw = self._read_raw(target)
-            if existing_raw is not None and existing_raw.startswith(_PREFIX_BASE64):
-                encoded = _PREFIX_BASE64.decode("ascii") + base64.b64encode(blob).decode("ascii")
-            elif existing_raw is not None and existing_raw.startswith(_PREFIX_ENCODED):
-                encoded = _PREFIX_ENCODED.decode("ascii") + blob.hex()
-            elif existing_raw is not None:
-                try:
-                    encoded = blob.decode("utf-8")
-                except UnicodeDecodeError:
-                    encoded = _PREFIX_BASE64.decode("ascii") + base64.b64encode(blob).decode(
-                        "ascii"
-                    )
-            else:
-                try:
-                    encoded = blob.decode("utf-8")
-                except UnicodeDecodeError:
-                    encoded = _PREFIX_BASE64.decode("ascii") + base64.b64encode(blob).decode(
-                        "ascii"
-                    )
-        else:
-            encoded = _PREFIX_BASE64.decode("ascii") + base64.b64encode(blob).decode("ascii")
+        encoded = _PREFIX_BASE64.decode("ascii") + base64.b64encode(blob).decode("ascii")
 
         kc_arg = f' "{self.keychain}"' if self.keychain else ""
         stdin_cmd = (

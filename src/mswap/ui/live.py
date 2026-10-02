@@ -12,7 +12,7 @@ from typing import Any, Literal, Protocol, TextIO
 
 from mswap.core.errors import UsageError
 from mswap.core.models import Account
-from mswap.core.poll_policy import ttl
+from mswap.core.poll_policy import NEAR_LIMIT, ttl
 from mswap.core.store import find_active, live_target
 from mswap.core.switcher import switch
 from mswap.core.usage import refresh_usage
@@ -152,8 +152,12 @@ def _build_account_rows(
         is_active = active is not None and acc.slot == active.slot
         entry = results.get(acc.slot)
         snap = entry.snapshot if entry else None
+        near_limit = False
+        if snap:
+            near_limit = any(b.remaining < NEAR_LIMIT for p in snap.pools for b in p.buckets)
+
         if entry is not None:
-            ttl_val = ttl(snap, active=is_active)
+            ttl_val = ttl(snap, active=is_active, near_limit=near_limit)
             elapsed = (now - entry.fetched_at).total_seconds()
             in_backoff = entry.backoff_until is not None and now < entry.backoff_until
             is_stale_flag = elapsed > ttl_val or in_backoff

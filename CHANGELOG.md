@@ -4,8 +4,11 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-02
+
 ### Added
 
+- Automated release workflow with PyPI Trusted Publishing, CodeQL analysis, post-release smoke verification, and full cross-platform CI matrix (W2.S6).
 - Docs: README, how it works, troubleshooting, security (W2.S5).
 - Demo tape (`docs/demo.tape`) and rendered walkthrough GIF (`docs/assets/demo.gif`) (W2.S5).
 - Relative markdown link validation script (`scripts/check_links.py`) integrated into CI quality job (W2.S5).
@@ -43,6 +46,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - CI workflow (W0.S4).
 - Community files and templates (W0.S5).
 
-[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/shaurya-disciplined/mswap/releases/tag/v0.1.0

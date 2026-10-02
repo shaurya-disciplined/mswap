@@ -22,11 +22,8 @@ jobs:
     needs: quality
     strategy:
       fail-fast: false
-      # Private-phase matrix. W2.S6 restores the full 3 OS × 4 Python matrix.
       matrix:
-        include:
-          - { os: windows-latest, python: "3.14" }
-          - { os: ubuntu-latest,  python: "3.11" }
+        include: ${{ fromJSON(github.event.repository.private && '[{"os":"windows-latest","python":"3.14"},{"os":"ubuntu-latest","python":"3.11"}]' || '[{"os":"windows-latest","python":"3.11"},{"os":"windows-latest","python":"3.12"},{"os":"windows-latest","python":"3.13"},{"os":"windows-latest","python":"3.14"},{"os":"ubuntu-latest","python":"3.11"},{"os":"ubuntu-latest","python":"3.12"},{"os":"ubuntu-latest","python":"3.13"},{"os":"ubuntu-latest","python":"3.14"},{"os":"macos-latest","python":"3.11"},{"os":"macos-latest","python":"3.12"},{"os":"macos-latest","python":"3.13"},{"os":"macos-latest","python":"3.14"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4

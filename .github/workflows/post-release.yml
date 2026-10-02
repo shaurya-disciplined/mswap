@@ -1,0 +1,49 @@
+name: post-release
+
+on:
+  release:
+    types: [published]
+
+concurrency:
+  group: "post-release-${{ github.ref }}"
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+
+      - name: Verify published package from PyPI
+        shell: bash
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION="${TAG#v}"
+          echo "Verifying mswap $VERSION installation from PyPI on ${{ matrix.os }}..."
+          success=0
+          for attempt in 1 2 3 4 5; do
+            echo "Attempt $attempt of 5 (waiting for PyPI propagation)..."
+            if uvx --from "mswap==$VERSION" python -m mswap --version; then
+              echo "mswap==$VERSION successfully verified!"
+              success=1
+              break
+            fi
+            if [ "$attempt" -lt 5 ]; then
+              echo "Waiting 60 seconds before next attempt..."
+              sleep 60
+            fi
+          done
+          if [ "$success" -ne 1 ]; then
+            echo "Failed to install and verify mswap==$VERSION after 5 attempts"
+            exit 1
+          fi

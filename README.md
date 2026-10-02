@@ -3,7 +3,7 @@
 *Unbreakable agy sessions.*
 
 [![ci](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml/badge.svg)](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml)
-<!-- [![PyPI](https://img.shields.io/pypi/v/mswap)](https://pypi.org/project/mswap/) -->
+[![PyPI](https://img.shields.io/pypi/v/mswap)](https://pypi.org/project/mswap/)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 <p align="center">

@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- Interactive live switch spike kit in `scripts/spikes/live_switch_spike.ps1` for guided evaluation of running agy process switch and write-back behavior (W2.S1).
+
 ## [0.2.0] - 2026-10-02
 
 ### Added

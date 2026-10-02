@@ -230,3 +230,69 @@ def test_render_list_empty_rows() -> None:
     theme = Theme(color=False, ascii=False)
     lines = render_list([], now=now, theme=theme, width=80, tz=UTC)
     assert lines == ["mswap · agy accounts"]
+
+
+def test_render_list_pace_ahead_marker() -> None:
+    now = datetime(2026, 10, 5, 12, 0, 0, tzinfo=UTC)  # 3 days into week
+    reset_at = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
+    acc = Account(slot=1, email="test@example.com", fp="fp1", added_at=now, updated_at=now)
+
+    # 3 days elapsed = 3/7 ≈ 0.4285. remaining = 0.40 ->
+    # actual_used = 0.60 > 0.4285 + 0.10 -> ahead!
+    snap = QuotaSnapshot(
+        fetched_at=now,
+        pools=(
+            Pool(
+                key="gemini",
+                name="Gemini",
+                buckets=(
+                    Bucket(window="5h", remaining=0.40, reset_at=now + timedelta(hours=2)),
+                    Bucket(window="weekly", remaining=0.40, reset_at=reset_at),
+                ),
+            ),
+        ),
+    )
+    entry = CacheEntry(
+        fetched_at=now, snapshot=snap, error=None, backoff_until=None, backoff_seconds=None
+    )
+    row = AccountRow(account=acc, active=False, entry=entry, stale=False)
+
+    # Color mode
+    theme_col = Theme(color=True, ascii=False)
+    lines_col = render_list([row], now=now, theme=theme_col, width=80, tz=UTC)
+    # 5h window must NOT have ahead of pace
+    assert "(ahead of pace)" not in lines_col[3]
+    # weekly window must have warn-coloured ahead of pace
+    assert "\033[33m(ahead of pace)\033[0m" in lines_col[4]
+
+    # No color mode
+    theme_plain = Theme(color=False, ascii=False)
+    lines_plain = render_list([row], now=now, theme=theme_plain, width=80, tz=UTC)
+    assert "(ahead of pace)" not in lines_plain[3]
+    assert " (ahead of pace)" in lines_plain[4]
+    assert "\033[" not in lines_plain[4]
+
+
+def test_render_list_pace_not_ahead_no_marker() -> None:
+    now = datetime(2026, 10, 5, 12, 0, 0, tzinfo=UTC)
+    reset_at = datetime(2026, 10, 9, 12, 0, 0, tzinfo=UTC)
+    acc = Account(slot=1, email="test@example.com", fp="fp1", added_at=now, updated_at=now)
+
+    # remaining = 0.90 -> actual_used = 0.10 -> not ahead
+    snap = QuotaSnapshot(
+        fetched_at=now,
+        pools=(
+            Pool(
+                key="gemini",
+                name="Gemini",
+                buckets=(Bucket(window="weekly", remaining=0.90, reset_at=reset_at),),
+            ),
+        ),
+    )
+    entry = CacheEntry(
+        fetched_at=now, snapshot=snap, error=None, backoff_until=None, backoff_seconds=None
+    )
+    row = AccountRow(account=acc, active=False, entry=entry, stale=False)
+    theme = Theme(color=False, ascii=False)
+    lines = render_list([row], now=now, theme=theme, width=80, tz=UTC)
+    assert "(ahead of pace)" not in lines[3]

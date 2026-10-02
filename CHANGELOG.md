@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- Weekly pace marker and JSON forecasts (W3.S4).
 - Usage cache with adaptive polling and rate-limit backoff; list --refresh (W3.S2).
 
 ### Changed

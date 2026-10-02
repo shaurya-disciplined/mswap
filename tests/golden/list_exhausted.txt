@@ -2,6 +2,6 @@
 
  [36m▸[0m [1m1[0m  alice@example.com [32m(active)[0m  [free]
      Gemini        5h    [2m────────────[0m   0% left  [2mresets 14:00 (2h 0m)[0m
-                   week  [2m────────────[0m   0% left  [2mresets Mon 05 Oct 12:00 (3d 0h)[0m
+                   week  [2m────────────[0m   0% left  [2mresets Mon 05 Oct 12:00 (3d 0h)[0m [33m(ahead of pace)[0m
      Claude & GPT  5h    [2m────────────[0m   0% left  [2mresets 13:00 (1h 0m)[0m
-                   week  [2m────────────[0m   0% left  [2mresets Sun 04 Oct 12:00 (2d 0h)[0m
+                   week  [2m────────────[0m   0% left  [2mresets Sun 04 Oct 12:00 (2d 0h)[0m [33m(ahead of pace)[0m

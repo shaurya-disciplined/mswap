@@ -280,3 +280,55 @@ def test_last_check_failed_preserves_older_snapshot(
     assert rc == 0
     assert "Gemini" in captured.out
     assert "last check failed:" in captured.out
+
+
+def test_list_json_includes_pace_forecast(
+    vault: MemoryVault,
+    http: FakeHttp,
+    clock: Any,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    home = Path(os.environ["MSWAP_HOME"])
+    _seed_config(home)
+    store = AccountStore(home)
+    now = clock.now()
+    _seed_accounts(store, vault, 1, now)
+
+    http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+        json_response(_load_fixture("quota_summary.json")),
+    )
+
+    rc = main(["list", "--json"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    data = json.loads(captured.out)
+    assert data["ok"] is True
+    pools = data["data"]["accounts"][0]["usage"]["pools"]
+    assert len(pools) > 0
+
+    # Locate Gemini pool and its buckets
+    gemini_pool = next(p for p in pools if p["key"] == "gemini")
+    b_5h = next(b for b in gemini_pool["buckets"] if b["window"] == "5h")
+    b_weekly = next(b for b in gemini_pool["buckets"] if b["window"] == "weekly")
+
+    # 5h bucket must have pace null
+    assert b_5h["pace"] is None
+
+    # weekly bucket has reset_at and elapsed > 1/7, so pace is populated
+    pace_data = b_weekly["pace"]
+    assert pace_data is not None
+    assert set(pace_data.keys()) == {
+        "expected_used",
+        "actual_used",
+        "ahead",
+        "exhaust_at",
+        "lasts_to_reset",
+    }
+    assert isinstance(pace_data["expected_used"], float)
+    assert isinstance(pace_data["actual_used"], float)
+    assert isinstance(pace_data["ahead"], bool)
+    assert isinstance(pace_data["lasts_to_reset"], bool)
+    # exhaust_at is either ISO string or null
+    assert pace_data["exhaust_at"] is None or isinstance(pace_data["exhaust_at"], str)

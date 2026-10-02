@@ -8,6 +8,7 @@ from datetime import datetime, tzinfo
 from typing import Any
 
 from mswap.core.models import Account, Pool, QuotaSnapshot
+from mswap.core.pace import pace
 from mswap.core.usage_cache import CacheEntry
 from mswap.ui.theme import Theme, _bar, dim
 from mswap.ui.timefmt import age_text, reset_text
@@ -134,6 +135,11 @@ def render_list(
                         reset_val = reset_text(b.reset_at, now, tz=tz)
                         if reset_val:
                             line_str += f"  {theme.dim(reset_val)}"
+
+                    if b.window == "weekly":
+                        p = pace(b, now)
+                        if p is not None and p.ahead:
+                            line_str += f" {theme.warn('(ahead of pace)')}"
 
                     lines.append(line_str)
 

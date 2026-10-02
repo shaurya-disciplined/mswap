@@ -8,6 +8,7 @@ from typing import Any
 
 from mswap.cli.context import AppContext
 from mswap.core.models import Account
+from mswap.core.pace import pace
 from mswap.core.poll_policy import ttl
 from mswap.core.store import find_active, live_target
 from mswap.core.usage import refresh_usage
@@ -53,7 +54,22 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
             if entry and entry.error:
                 err_msg = entry.error.get("message")
 
-            pools_json = [p.to_json() for p in snap.pools] if snap is not None else []
+            pools_json: list[dict[str, Any]] = []
+            if snap is not None:
+                for p in snap.pools:
+                    buckets_json: list[dict[str, Any]] = []
+                    for b in p.buckets:
+                        b_dict = b.to_json()
+                        p_info = pace(b, now)
+                        b_dict["pace"] = p_info.to_json() if p_info is not None else None
+                        buckets_json.append(b_dict)
+                    pools_json.append(
+                        {
+                            "key": p.key,
+                            "name": p.name,
+                            "buckets": buckets_json,
+                        }
+                    )
             fetched_at_str = entry.fetched_at.isoformat() if entry else now.isoformat()
 
             accounts_data.append(

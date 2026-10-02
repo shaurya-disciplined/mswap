@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "displayName": "Empty Group One",
+      "buckets": []
+    },
+    {
+      "displayName": "Empty Group Two"
+    },
+    {
+      "displayName": "Gemini Models",
+      "buckets": [
+        {
+          "bucketId": "gemini-5h",
+          "window": "5h",
+          "remainingFraction": 0.9,
+          "resetTime": "2026-10-02T00:21:12Z"
+        }
+      ]
+    }
+  ]
+}

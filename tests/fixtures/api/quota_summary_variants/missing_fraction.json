@@ -1,0 +1,20 @@
+{
+  "groups": [
+    {
+      "displayName": "Gemini Models",
+      "buckets": [
+        {
+          "bucketId": "gemini-weekly",
+          "window": "weekly",
+          "resetTime": "2026-10-08T04:59:12Z"
+        },
+        {
+          "bucketId": "gemini-5h",
+          "window": "5h",
+          "resetTime": "2026-10-02T00:21:12Z",
+          "remainingFraction": 0.5
+        }
+      ]
+    }
+  ]
+}

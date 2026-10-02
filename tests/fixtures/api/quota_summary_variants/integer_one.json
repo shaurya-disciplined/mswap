@@ -1,0 +1,15 @@
+{
+  "groups": [
+    {
+      "displayName": "Claude and GPT models",
+      "buckets": [
+        {
+          "bucketId": "3p-5h",
+          "window": "5h",
+          "resetTime": "2026-10-02T00:21:12Z",
+          "remainingFraction": 1
+        }
+      ]
+    }
+  ]
+}

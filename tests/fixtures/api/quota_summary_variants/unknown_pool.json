@@ -1,0 +1,21 @@
+{
+  "groups": [
+    {
+      "displayName": "Beta Experimental Models",
+      "buckets": [
+        {
+          "bucketId": "beta-5h",
+          "window": "5h",
+          "remainingFraction": 0.75,
+          "resetTime": "2026-10-02T00:21:12Z"
+        },
+        {
+          "bucketId": "beta-weekly",
+          "window": "weekly",
+          "remainingFraction": 0.95,
+          "resetTime": "2026-10-08T00:21:12Z"
+        }
+      ]
+    }
+  ]
+}

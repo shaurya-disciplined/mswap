@@ -15,7 +15,7 @@ from mswap.agy.tokens import fingerprint
 from mswap.cli import main
 from mswap.core.models import Account, Quarantine
 from mswap.core.store import AccountStore, live_target, slot_target
-from mswap.util.http import FakeHttp, json_response
+from mswap.util.http import FakeHttp, HttpResponse, json_response
 from mswap.vault.memory import MemoryVault
 from tests.conftest import make_blob
 
@@ -804,6 +804,37 @@ def test_list_human_output_tags(
     assert "mswap · agy accounts" in captured.out
     assert "1  alice@example.com (active)  · alias work" in captured.out
     assert "2  bob@example.com  · disabled" in captured.out
+
+
+def test_list_models_fallback_human_note(
+    vault: MemoryVault, http: FakeHttp, capsys: pytest.CaptureFixture[str]
+) -> None:
+    _seed_config()
+    _seed_two_accounts(vault)
+
+    http.add(
+        "POST",
+        "https://oauth2.googleapis.com/token",
+        json_response(_load_fixture("token_refresh.json")),
+    )
+    # Summary returns 404
+    http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+        HttpResponse(status=404, body=b"Not Found", headers={}),
+    )
+    # Fallback to models
+    http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+        json_response(_load_fixture("fetch_available_models.json")),
+    )
+
+    rc = main(["list"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "(per-model view: summary unavailable)" in captured.out
+    assert "model" in captured.out
 
 
 # ---------------------------------------------------------------------------

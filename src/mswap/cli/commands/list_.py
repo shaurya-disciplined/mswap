@@ -9,69 +9,16 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from mswap.agy.api import quota_groups
+from mswap.agy.api import AgyApi
 from mswap.agy.install import agy_version, os_arch, user_agent
 from mswap.agy.paths import agy_exe
 from mswap.agy.tokens import TokenService
 from mswap.cli.context import AppContext
 from mswap.core.errors import MswapError, TokenDead
-from mswap.core.models import Account
+from mswap.core.models import Account, QuotaSnapshot
 from mswap.core.store import find_active, live_target, slot_target
 from mswap.ui import jsonout
 from mswap.ui.render import print_quota
-
-
-def _build_pools(groups: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
-    if not groups:
-        return []
-    pools_map: dict[str, dict[str, Any]] = {}
-    for g in groups:
-        buckets_raw = g.get("buckets", [])
-        if not isinstance(buckets_raw, list):
-            continue
-        for b in buckets_raw:
-            if not isinstance(b, dict):
-                continue
-            bucket_id = str(b.get("bucketId", ""))
-            key = bucket_id.split("-", 1)[0] if "-" in bucket_id else bucket_id
-            if not key:
-                key = "unknown"
-            if key not in pools_map:
-                if key == "gemini":
-                    name = "Gemini"
-                elif key == "3p":
-                    name = "Claude & GPT"
-                else:
-                    name = str(g.get("displayName", key))
-                pools_map[key] = {
-                    "key": key,
-                    "name": name,
-                    "buckets": [],
-                }
-            rem_raw = b.get("remainingFraction")
-            rem = float(rem_raw) if rem_raw is not None else 0.0
-            reset_at = b.get("resetTime") if rem < 1.0 else None
-            pools_map[key]["buckets"].append(
-                {
-                    "window": str(b.get("window", "")),
-                    "remaining": rem,
-                    "reset_at": reset_at,
-                }
-            )
-    for p in pools_map.values():
-        p["buckets"].sort(
-            key=lambda x: (
-                0 if x["window"] == "5h" else (1 if x["window"] == "weekly" else 2),
-                x["window"],
-            )
-        )
-    return sorted(
-        pools_map.values(),
-        key=lambda p: (
-            0 if p["key"] == "gemini" else (1 if p["key"] == "3p" else 2),
-            p["key"],
-        ),
-    )
 
 
 def run(ctx: AppContext, _args: argparse.Namespace) -> int:
@@ -101,11 +48,12 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
             cache = {}
     version = agy_version(agy_exe(), cache)
     ua = user_agent(version, os_arch())
+    api = AgyApi(ctx.http, ua, clock=ctx.clock)
     token_service = TokenService(ctx)
 
     def fetch(
         acc: Account,
-    ) -> tuple[Account, list[dict[str, Any]] | None, str | None]:
+    ) -> tuple[Account, QuotaSnapshot | None, str | None]:
         is_active = active is not None and acc.slot == active.slot
         if acc.quarantined is not None:
             return (
@@ -120,16 +68,18 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
                     usage_json = json.loads(usage_file.read_text(encoding="utf-8"))
                     acc_entry = usage_json.get("accounts", {}).get(acc.fp)
                     if acc_entry and "groups" in acc_entry:
-                        return acc, acc_entry["groups"], None
+                        snap = AgyApi._parse_summary(
+                            {"groups": acc_entry["groups"]},
+                            ctx.clock.now(),
+                        )
+                        return acc, snap, None
         blob = live if is_active else ctx.vault.read(slot_target(acc.slot))
         if not blob:
             return acc, None, "saved login missing (run `mswap add` while signed in as it)"
         try:
-            if is_active:
-                token = token_service.fresh_for_live(blob)
-            else:
-                token = token_service.fresh_for_slot(acc)
-            return acc, quota_groups(token, ctx.http, version, ua=ua), None
+            target = blob if is_active else acc
+            snapshot = token_service.call_with_retry(target, api.quota_summary)
+            return acc, snapshot, None
         except TokenDead:
             return (
                 acc,
@@ -145,8 +95,13 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
     if ctx.json:
         now_iso = ctx.clock.now().isoformat()
         accounts_data: list[dict[str, Any]] = []
-        for acc, groups, err in results:
+        for acc, snapshot, err in results:
             is_active = active is not None and acc.slot == active.slot
+            pools_json = (
+                [p.to_json() for p in snapshot.pools]
+                if (snapshot is not None and err is None)
+                else []
+            )
             accounts_data.append(
                 {
                     "slot": acc.slot,
@@ -164,10 +119,12 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
                     ),
                     "plan": acc.plan,
                     "usage": {
-                        "fetched_at": now_iso,
+                        "fetched_at": (
+                            snapshot.fetched_at.isoformat() if snapshot is not None else now_iso
+                        ),
                         "stale": False,
                         "error": err,
-                        "pools": _build_pools(groups) if err is None else [],
+                        "pools": pools_json,
                     },
                 }
             )
@@ -180,7 +137,7 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
 
     header = ctx.theme.bold("mswap") + ctx.theme.dim(" · agy accounts")
     print(header, file=ctx.out)
-    for acc, groups, err in results:
+    for acc, snapshot, err in results:
         is_active = active is not None and acc.slot == active.slot
         mark = ctx.theme.accent(ctx.theme.glyph_active) if is_active else " "
         tag = ctx.theme.ok(" (active)") if is_active else ""
@@ -190,8 +147,10 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
         print(f"\n {mark} {slot_str}  {acc.email}{tag}{alias_str}{disabled_str}", file=ctx.out)
         if err:
             print(f"     {ctx.theme.err('n/a')}  {ctx.theme.dim(err)}", file=ctx.out)
-        else:
-            for line in print_quota(groups or [], ctx.clock.now()):
+        elif snapshot is not None:
+            if snapshot.source == "models":
+                print(ctx.theme.dim("  (per-model view: summary unavailable)"), file=ctx.out)
+            for line in print_quota(snapshot, ctx.clock.now()):
                 print(line, file=ctx.out)
     if live and not active:
         msg = (

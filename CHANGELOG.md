@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Changed
+
+- Sturdier quota parsing with automatic fallback (W3.S1).
+
 ## [0.3.0] - 2026-10-02
 
 ### Added

@@ -1,0 +1,21 @@
+{
+  "unknownTopLevel": "futureValue",
+  "groups": [
+    {
+      "displayName": "Gemini Models",
+      "unknownGroupField": 12345,
+      "nestedMeta": {
+        "tag": "alpha"
+      },
+      "buckets": [
+        {
+          "bucketId": "gemini-5h",
+          "window": "5h",
+          "remainingFraction": 0.8,
+          "resetTime": "2026-10-02T00:21:12Z",
+          "unknownBucketProp": true
+        }
+      ]
+    }
+  ]
+}

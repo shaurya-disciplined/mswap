@@ -71,6 +71,12 @@ class UsageError(MswapError):
     code: int = 64
 
 
+class TokenExpired(MswapError):
+    """Raised when an API call returns HTTP 401 Unauthorized."""
+
+    code: int = 1
+
+
 class ApiError(MswapError):
     """Raised when an API call fails with an HTTP error."""
 
@@ -83,10 +89,17 @@ class ApiError(MswapError):
         status: int = 0,
         endpoint: str = "",
         hint: str | None = None,
+        kind: str | None = None,
     ) -> None:
         super().__init__(message, hint=hint)
         self.status = status
         self.endpoint = endpoint
+        self._kind = kind
+
+    @property
+    def kind(self) -> str:
+        """Return specific error kind or exception class name."""
+        return self._kind if self._kind is not None else self.__class__.__name__
 
 
 class NetworkError(MswapError):

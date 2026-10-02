@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
-from mswap.agy.api import quota_groups
+from mswap.agy.api import AgyApi
 from mswap.agy.client_discovery import (
     CLIENT_ID_RE,
     SECRET_RE,
@@ -450,9 +450,10 @@ def check_net_quota(ctx: AppContext, accounts: list[Account] | None) -> Check:
             cache = {}
     version = agy_version(agy_exe(), cache)
     ua = user_agent(version, os_arch())
+    api = AgyApi(ctx.http, ua)
 
     try:
-        quota_groups(token, ctx.http, version, ua=ua)
+        api.quota_summary(token)
         return Check(
             id="net.quota",
             status="ok",

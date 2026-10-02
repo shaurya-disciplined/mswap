@@ -25,7 +25,7 @@ from mswap.agy.tokens import (
 )
 from mswap.cli.commands import list_
 from mswap.cli.context import AppContext
-from mswap.core.errors import ApiError, CorruptState
+from mswap.core.errors import ApiError, CorruptState, TokenExpired
 from mswap.core.models import Account, Quarantine
 from mswap.core.store import live_target, slot_target
 from mswap.util.http import FakeHttp, json_response
@@ -427,3 +427,70 @@ def test_refresh_legacy_function(http: FakeHttp) -> None:
     )
     res = refresh("1//sample", http)
     assert res["access_token"] == "ya29.FAKE-refreshed"
+
+
+def test_token_service_call_with_retry_401_success(ctx: AppContext) -> None:
+    _seed_config()
+    blob = make_blob(1, expiry="2099-01-01T00:00:00Z")
+    ctx.vault.write(slot_target(1), blob, "alice@example.com")
+    account = Account(
+        slot=1,
+        email="alice@example.com",
+        fp=fingerprint(blob),
+        added_at=ctx.clock.now(),
+        updated_at=ctx.clock.now(),
+    )
+    ctx.store.save([account])
+
+    assert isinstance(ctx.http, FakeHttp)
+    ctx.http.add(
+        "POST",
+        "https://oauth2.googleapis.com/token",
+        json_response({"access_token": "ya29.FAKE-refreshed", "expires_in": 3599}),
+    )
+
+    calls: list[str] = []
+
+    def mock_api_call(token: str) -> str:
+        calls.append(token)
+        if len(calls) == 1:
+            raise TokenExpired("token expired")
+        return "success"
+
+    svc = TokenService(ctx)
+    result = svc.call_with_retry(account, mock_api_call)
+    assert result == "success"
+    assert len(calls) == 2
+    assert calls[0] == "ya29.FAKE-access-1"
+    assert calls[1] == "ya29.FAKE-refreshed"
+
+
+def test_token_service_call_with_retry_401_twice_raises_apierror(ctx: AppContext) -> None:
+    _seed_config()
+    blob = make_blob(1, expiry="2099-01-01T00:00:00Z")
+    ctx.vault.write(slot_target(1), blob, "alice@example.com")
+    account = Account(
+        slot=1,
+        email="alice@example.com",
+        fp=fingerprint(blob),
+        added_at=ctx.clock.now(),
+        updated_at=ctx.clock.now(),
+    )
+    ctx.store.save([account])
+
+    assert isinstance(ctx.http, FakeHttp)
+    ctx.http.add(
+        "POST",
+        "https://oauth2.googleapis.com/token",
+        json_response({"access_token": "ya29.FAKE-refreshed", "expires_in": 3599}),
+    )
+
+    def always_401(token: str) -> str:
+        raise TokenExpired("token expired")
+
+    svc = TokenService(ctx)
+    with pytest.raises(ApiError) as exc_info:
+        svc.call_with_retry(account, always_401)
+
+    assert "Google rejected the refreshed token." in exc_info.value.message
+    assert exc_info.value.hint == "Run `mswap doctor --online`."

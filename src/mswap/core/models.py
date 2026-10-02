@@ -151,3 +151,146 @@ def account_to_json(a: Account) -> dict[str, Any]:
             if k not in data:
                 data[k] = v
     return data
+
+
+@dataclass(frozen=True, slots=True)
+class Bucket:
+    """A quota limit bucket representing a consumption window."""
+
+    window: str  # "5h" | "weekly" | other (forward-compatible)
+    remaining: float  # clamp to [0,1]; missing -> 0.0
+    reset_at: datetime | None  # None when remaining == 1.0 (rolling, meaningless)
+
+    def __post_init__(self) -> None:
+        clamped = max(0.0, min(1.0, float(self.remaining)))
+        if clamped != self.remaining:
+            object.__setattr__(self, "remaining", clamped)
+        if clamped >= 1.0 and self.reset_at is not None:
+            object.__setattr__(self, "reset_at", None)
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize Bucket to dictionary."""
+        return bucket_to_json(self)
+
+    @classmethod
+    def from_json(cls, d: dict[str, Any]) -> Bucket:
+        """Deserialize Bucket from dictionary."""
+        return bucket_from_json(d)
+
+
+@dataclass(frozen=True, slots=True)
+class Pool:
+    """A collection of quota buckets sharing a provider or model group."""
+
+    key: str  # "gemini" | "3p" | other
+    name: str  # "Gemini" | "Claude & GPT" | group displayName
+    buckets: tuple[Bucket, ...]  # sorted: "5h" first, then "weekly", then others alpha
+
+    def tightest(self) -> Bucket:
+        """Return the bucket with lowest remaining fraction."""
+        if not self.buckets:
+            raise ValueError(f"Pool '{self.key}' has no buckets")
+        return min(self.buckets, key=lambda b: b.remaining)
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize Pool to dictionary."""
+        return pool_to_json(self)
+
+    @classmethod
+    def from_json(cls, d: dict[str, Any]) -> Pool:
+        """Deserialize Pool from dictionary."""
+        return pool_from_json(d)
+
+
+@dataclass(frozen=True, slots=True)
+class QuotaSnapshot:
+    """Snapshot of quota pools fetched from Antigravity API."""
+
+    fetched_at: datetime
+    pools: tuple[Pool, ...]  # sorted: gemini, 3p, others alpha
+    source: Literal["summary", "models"] = "summary"
+
+    def pool(self, key: str) -> Pool | None:
+        """Find a pool by its key."""
+        for p in self.pools:
+            if p.key == key:
+                return p
+        return None
+
+    def to_json(self) -> dict[str, Any]:
+        """Serialize QuotaSnapshot to dictionary."""
+        return quota_snapshot_to_json(self)
+
+    @classmethod
+    def from_json(cls, d: dict[str, Any]) -> QuotaSnapshot:
+        """Deserialize QuotaSnapshot from dictionary."""
+        return quota_snapshot_from_json(d)
+
+
+def bucket_to_json(b: Bucket) -> dict[str, Any]:
+    """Serialize Bucket to JSON-compatible dictionary."""
+    return {
+        "window": b.window,
+        "remaining": b.remaining,
+        "reset_at": b.reset_at.isoformat() if b.reset_at is not None else None,
+    }
+
+
+def bucket_from_json(d: dict[str, Any]) -> Bucket:
+    """Deserialize Bucket from JSON-compatible dictionary."""
+    window = str(d.get("window", ""))
+    rem_raw = d.get("remaining", 0.0)
+    remaining = float(rem_raw) if rem_raw is not None else 0.0
+    raw_reset = d.get("reset_at")
+    reset_at: datetime | None = None
+    if raw_reset is not None:
+        if isinstance(raw_reset, datetime):
+            reset_at = raw_reset
+        else:
+            reset_at = datetime.fromisoformat(str(raw_reset))
+        if reset_at.tzinfo is None:
+            reset_at = reset_at.replace(tzinfo=UTC)
+    return Bucket(window=window, remaining=remaining, reset_at=reset_at)
+
+
+def pool_to_json(p: Pool) -> dict[str, Any]:
+    """Serialize Pool to JSON-compatible dictionary."""
+    return {
+        "key": p.key,
+        "name": p.name,
+        "buckets": [b.to_json() for b in p.buckets],
+    }
+
+
+def pool_from_json(d: dict[str, Any]) -> Pool:
+    """Deserialize Pool from JSON-compatible dictionary."""
+    key = str(d.get("key", ""))
+    name = str(d.get("name", key))
+    raw_buckets = d.get("buckets", [])
+    buckets = tuple(bucket_from_json(b) for b in raw_buckets if isinstance(b, dict))
+    return Pool(key=key, name=name, buckets=buckets)
+
+
+def quota_snapshot_to_json(s: QuotaSnapshot) -> dict[str, Any]:
+    """Serialize QuotaSnapshot to JSON-compatible dictionary."""
+    return {
+        "fetched_at": s.fetched_at.isoformat(),
+        "pools": [p.to_json() for p in s.pools],
+        "source": s.source,
+    }
+
+
+def quota_snapshot_from_json(d: dict[str, Any]) -> QuotaSnapshot:
+    """Deserialize QuotaSnapshot from JSON-compatible dictionary."""
+    raw_fetched = d["fetched_at"]
+    if isinstance(raw_fetched, datetime):
+        fetched_at = raw_fetched
+    else:
+        fetched_at = datetime.fromisoformat(str(raw_fetched))
+    if fetched_at.tzinfo is None:
+        fetched_at = fetched_at.replace(tzinfo=UTC)
+    raw_pools = d.get("pools", [])
+    pools = tuple(pool_from_json(p) for p in raw_pools if isinstance(p, dict))
+    source_val = d.get("source", "summary")
+    source: Literal["summary", "models"] = "models" if source_val == "models" else "summary"
+    return QuotaSnapshot(fetched_at=fetched_at, pools=pools, source=source)

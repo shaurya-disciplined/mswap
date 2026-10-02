@@ -2,22 +2,24 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta, tzinfo
 from typing import Any
 
 from mswap.agy.tokens import parse_go_time
+from mswap.core.models import Pool, QuotaSnapshot
 from mswap.ui.theme import _bar, dim
 
 _GROUP_NAMES = {"Gemini Models": "Gemini", "Claude and GPT models": "Claude & GPT"}
 _WINDOW_NAMES = {"5h": "5h", "weekly": "week"}
 
 
-def reset_text(iso: str | None, now: datetime, *, tz: tzinfo | None = None) -> str:
+def reset_text(iso: str | datetime | None, now: datetime, *, tz: tzinfo | None = None) -> str:
     """Format reset time relative to now."""
     if not iso:
         return ""
     try:
-        t = parse_go_time(iso)
+        t = iso if isinstance(iso, datetime) else parse_go_time(iso)
     except Exception:
         return ""
     if t.tzinfo is None:
@@ -38,20 +40,47 @@ def reset_text(iso: str | None, now: datetime, *, tz: tzinfo | None = None) -> s
 
 
 def print_quota(
-    groups: list[dict[str, Any]],
+    quota: QuotaSnapshot | Sequence[Pool] | list[dict[str, Any]],
     now: datetime,
     *,
     tz: tzinfo | None = None,
 ) -> list[str]:
     """Format quota buckets as lines."""
     lines: list[str] = []
-    for g in groups:
-        name = _GROUP_NAMES.get(g.get("displayName", ""), g.get("displayName", "?"))
+    pools: Sequence[Pool] = []
+    if isinstance(quota, QuotaSnapshot):
+        pools = quota.pools
+    elif isinstance(quota, Sequence) and quota and isinstance(quota[0], Pool):
+        pools = quota  # type: ignore[assignment]
+
+    if pools:
+        for p in pools:
+            for i, b in enumerate(p.buckets):
+                frac = b.remaining
+                label = p.name if i == 0 else ""
+                window = _WINDOW_NAMES.get(b.window, b.window)
+                reset = reset_text(b.reset_at, now, tz=tz) if frac < 1 else ""
+                reset_suffix = dim(reset) if reset else ""
+                line_str = (
+                    f"     {label:<13} {window:<5} {_bar(frac)} "
+                    f"{int(frac * 100):>3}% left  {reset_suffix}"
+                )
+                lines.append(line_str)
+        return lines
+
+    for g in quota:  # type: ignore[union-attr]
+        if not isinstance(g, dict):
+            continue
+        raw_name = g.get("displayName")
+        disp_name = str(raw_name) if raw_name is not None else "?"
+        name = _GROUP_NAMES.get(disp_name, disp_name)
         buckets = sorted(g.get("buckets", []), key=lambda b: b.get("window") != "5h")
         for i, b in enumerate(buckets):
             frac = float(b.get("remainingFraction", 0))
             label = name if i == 0 else ""
-            window = _WINDOW_NAMES.get(b.get("window", ""), b.get("window", "?"))
+            raw_win = b.get("window")
+            win_str = str(raw_win) if raw_win is not None else "?"
+            window = _WINDOW_NAMES.get(win_str, win_str)
             reset = reset_text(b.get("resetTime"), now, tz=tz) if frac < 1 else ""
             reset_suffix = dim(reset) if reset else ""
             line_str = (

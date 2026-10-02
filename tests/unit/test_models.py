@@ -238,3 +238,95 @@ def test_validate_alias_uniqueness() -> None:
         validate_alias("primary", accounts, exclude_slot=2)
     assert exc_info.value.code == 64
     assert "Alias 'primary' is already in use by account 1." in exc_info.value.message
+
+
+def test_bucket_invariants_and_clamping() -> None:
+    from mswap.core.models import Bucket
+
+    reset = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+    b1 = Bucket(window="5h", remaining=0.5, reset_at=reset)
+    assert b1.window == "5h"
+    assert b1.remaining == 0.5
+    assert b1.reset_at == reset
+
+    # Clamping below 0
+    b_low = Bucket(window="5h", remaining=-0.5, reset_at=reset)
+    assert b_low.remaining == 0.0
+
+    # Clamping above 1 and resetting reset_at to None
+    b_high = Bucket(window="5h", remaining=1.5, reset_at=reset)
+    assert b_high.remaining == 1.0
+    assert b_high.reset_at is None
+
+    # remaining == 1.0 clears reset_at
+    b_one = Bucket(window="weekly", remaining=1.0, reset_at=reset)
+    assert b_one.reset_at is None
+
+    with pytest.raises(FrozenInstanceError):
+        b1.remaining = 0.9  # type: ignore[misc]
+
+
+def test_bucket_json_roundtrip() -> None:
+    from mswap.core.models import Bucket, bucket_from_json, bucket_to_json
+
+    reset = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+    b = Bucket(window="5h", remaining=0.85, reset_at=reset)
+    d = bucket_to_json(b)
+    assert d == {"window": "5h", "remaining": 0.85, "reset_at": "2026-10-02T12:00:00+00:00"}
+    b2 = bucket_from_json(d)
+    assert b2 == b
+
+    # Test class methods
+    assert b.to_json() == d
+    assert Bucket.from_json(d) == b
+
+
+def test_pool_tightest_and_json() -> None:
+    from mswap.core.models import Bucket, Pool, pool_from_json, pool_to_json
+
+    b1 = Bucket(window="5h", remaining=0.9, reset_at=None)
+    b2 = Bucket(window="weekly", remaining=0.3, reset_at=None)
+    pool = Pool(key="gemini", name="Gemini", buckets=(b1, b2))
+    assert pool.key == "gemini"
+    assert pool.name == "Gemini"
+    assert pool.tightest() == b2
+
+    d = pool_to_json(pool)
+    assert d["key"] == "gemini"
+    assert d["name"] == "Gemini"
+    assert len(d["buckets"]) == 2
+    assert pool_from_json(d) == pool
+
+    # Empty buckets raises ValueError on tightest()
+    empty_pool = Pool(key="3p", name="Claude & GPT", buckets=())
+    with pytest.raises(ValueError, match="has no buckets"):
+        empty_pool.tightest()
+
+
+def test_quota_snapshot_methods_and_json() -> None:
+    from mswap.core.models import (
+        Bucket,
+        Pool,
+        QuotaSnapshot,
+        quota_snapshot_from_json,
+        quota_snapshot_to_json,
+    )
+
+    now = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
+    b = Bucket(window="5h", remaining=0.5, reset_at=None)
+    p1 = Pool(key="gemini", name="Gemini", buckets=(b,))
+    p2 = Pool(key="3p", name="Claude & GPT", buckets=(b,))
+    snap = QuotaSnapshot(fetched_at=now, pools=(p1, p2), source="models")
+
+    assert snap.pool("gemini") == p1
+    assert snap.pool("3p") == p2
+    assert snap.pool("nonexistent") is None
+    assert snap.source == "models"
+
+    d = quota_snapshot_to_json(snap)
+    assert d["source"] == "models"
+    assert d["fetched_at"] == "2026-10-02T12:00:00+00:00"
+    assert len(d["pools"]) == 2
+
+    snap2 = quota_snapshot_from_json(d)
+    assert snap2 == snap

@@ -9,16 +9,19 @@ import hashlib
 import json
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 from mswap.agy.client_discovery import OAuthClient, discover, rediscover
 from mswap.agy.paths import agy_exe
-from mswap.core.errors import ApiError, CorruptState, MswapError, TokenDead
+from mswap.core.errors import ApiError, CorruptState, MswapError, TokenDead, TokenExpired
 from mswap.core.models import Account, Quarantine
 from mswap.util.http import Http
+
+T = TypeVar("T")
 
 
 class TokenContext(Protocol):
@@ -116,15 +119,17 @@ def ensure_fresh(
     client: OAuthClient,
     http: Http,
     now: datetime,
+    *,
+    force: bool = False,
 ) -> Fresh:
-    """Return usable access token, refreshing if expiring within 120s."""
+    """Return usable access token, refreshing if expiring within 120s or force is True."""
     data = validate_blob(blob)
     tok = data["token"]
     refresh_token = tok["refresh_token"]
 
     expiry_str = tok.get("expiry")
     is_fresh = False
-    if expiry_str and isinstance(expiry_str, str):
+    if not force and expiry_str and isinstance(expiry_str, str):
         try:
             exp_dt = parse_go_time(expiry_str)
             now_cmp = now if now.tzinfo is not None else now.astimezone()
@@ -134,7 +139,7 @@ def ensure_fresh(
         except CorruptState:
             is_fresh = False
 
-    if is_fresh:
+    if not force and is_fresh:
         return Fresh(access_token=str(tok["access_token"]), updated_blob=None)
 
     resp = http.request(
@@ -248,7 +253,7 @@ class TokenService:
         cache_file = self._client_cache_file()
         return rediscover(exe, cache_file, self.ctx.http, sample_refresh_token)
 
-    def fresh_for_slot(self, account: Account) -> str:
+    def fresh_for_slot(self, account: Account, *, force: bool = False) -> str:
         """Obtain a fresh access token for a saved account slot."""
         prefix = os.environ.get("MSWAP_VAULT_PREFIX", "mswap:")
         target = f"{prefix}slot{account.slot}"
@@ -265,11 +270,11 @@ class TokenService:
 
         now = self.ctx.clock.now()
         try:
-            fresh = ensure_fresh(blob, client, self.ctx.http, now)
+            fresh = ensure_fresh(blob, client, self.ctx.http, now, force=force)
         except ClientRejected:
             client = self._rediscover_client(sample_rt)
             try:
-                fresh = ensure_fresh(blob, client, self.ctx.http, now)
+                fresh = ensure_fresh(blob, client, self.ctx.http, now, force=force)
             except ClientRejected as e:
                 raise ApiError(
                     "agy's sign-in client changed and couldn't be re-detected.",
@@ -307,7 +312,7 @@ class TokenService:
 
         return fresh.access_token
 
-    def fresh_for_live(self, blob: bytes) -> str:
+    def fresh_for_live(self, blob: bytes, *, force: bool = False) -> str:
         """Obtain a fresh access token for the live agy login in memory only."""
         token_data = validate_blob(blob)
         sample_rt = token_data["token"]["refresh_token"]
@@ -315,11 +320,11 @@ class TokenService:
 
         now = self.ctx.clock.now()
         try:
-            fresh = ensure_fresh(blob, client, self.ctx.http, now)
+            fresh = ensure_fresh(blob, client, self.ctx.http, now, force=force)
         except ClientRejected:
             client = self._rediscover_client(sample_rt)
             try:
-                fresh = ensure_fresh(blob, client, self.ctx.http, now)
+                fresh = ensure_fresh(blob, client, self.ctx.http, now, force=force)
             except ClientRejected as e:
                 raise ApiError(
                     "agy's sign-in client changed and couldn't be re-detected.",
@@ -328,3 +333,30 @@ class TokenService:
 
         # In-memory only: NEVER write the live target!
         return fresh.access_token
+
+    def call_with_retry(
+        self,
+        target: Account | bytes,
+        fn: Callable[[str], T],
+    ) -> T:
+        """Call fn with a fresh access token, refreshing and retrying once on TokenExpired."""
+        if isinstance(target, (bytes, bytearray)):
+            token = self.fresh_for_live(bytes(target))
+        else:
+            token = self.fresh_for_slot(target)
+        try:
+            return fn(token)
+        except TokenExpired:
+            if isinstance(target, (bytes, bytearray)):
+                refreshed = self.fresh_for_live(bytes(target), force=True)
+            else:
+                refreshed = self.fresh_for_slot(target, force=True)
+            try:
+                return fn(refreshed)
+            except TokenExpired as e:
+                raise ApiError(
+                    "Google rejected the refreshed token.",
+                    hint="Run `mswap doctor --online`.",
+                ) from e
+
+    run_with_token = call_with_retry

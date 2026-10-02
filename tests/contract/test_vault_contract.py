@@ -53,6 +53,7 @@ class VaultContractBackend:
     params=["memory"]
     + (["windows"] if sys.platform == "win32" else [])
     + (["macos"] if sys.platform == "darwin" else [])
+    + (["file"] if sys.platform != "win32" else [])
 )
 def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, None, None]:
     name = request.param
@@ -89,6 +90,14 @@ def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, N
             capture_output=True,
         )
         vault = MacKeychainVault(keychain=str(kc_path))
+    elif name == "file":
+        import tempfile
+        from pathlib import Path
+
+        from mswap.vault.file import FileVault
+
+        tmp_dir = Path(tempfile.mkdtemp(prefix="mswap_file_vault_"))
+        vault = FileVault(root=tmp_dir)
     else:
         raise ValueError(f"Unknown backend: {name}")
 
@@ -108,6 +117,10 @@ def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, N
         import subprocess
 
         subprocess.run(["security", "delete-keychain", str(kc_path)], capture_output=True)
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+    elif name == "file" and tmp_dir is not None:
+        import shutil
+
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 

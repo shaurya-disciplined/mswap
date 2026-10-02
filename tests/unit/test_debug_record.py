@@ -349,7 +349,9 @@ def test_record_notes_a_single_failed_endpoint_without_the_server_message(
     ctx: AppContext, vault: MemoryVault, tmp_path: Path
 ) -> None:
     _seed(ctx, vault)
-    ctx.http.add("POST", QUOTA_SUMMARY_URL, json_response({"error": {"message": "bob@example.com"}}, 404))  # type: ignore[attr-defined]
+    ctx.http.add(
+        "POST", QUOTA_SUMMARY_URL, json_response({"error": {"message": "bob@example.com"}}, 404)
+    )  # type: ignore[attr-defined]
     ctx.http.add("POST", LOAD_CODE_ASSIST_URL, json_response(_fixture("load_code_assist.json")))  # type: ignore[attr-defined]
     ctx.http.add("POST", FETCH_MODELS_URL, json_response(_fixture("fetch_available_models.json")))  # type: ignore[attr-defined]
     out = tmp_path / "capture"

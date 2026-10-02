@@ -188,3 +188,166 @@ foo = "bar"
         cfg = load_settings(p)
     assert len(recorded) >= 2
     assert cfg.autopilot.threshold == 90
+
+
+@pytest.mark.parametrize("valid_threshold", [50, 75, 99])
+def test_valid_threshold_boundary(tmp_path: Path, valid_threshold: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\nthreshold = {valid_threshold}\n", encoding="utf-8")
+    cfg = load_settings(p)
+    assert cfg.autopilot.threshold == valid_threshold
+
+
+@pytest.mark.parametrize("invalid_threshold", [49, 100])
+def test_threshold_out_of_range_raises_usage_error(tmp_path: Path, invalid_threshold: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\nthreshold = {invalid_threshold}\n", encoding="utf-8")
+    with pytest.raises(UsageError) as exc_info:
+        load_settings(p)
+    assert "autopilot.threshold" in str(exc_info.value)
+    assert "between 50 and 99" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("valid_margin", [0, 25, 50])
+def test_valid_margin_boundary(tmp_path: Path, valid_margin: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\nmargin = {valid_margin}\n", encoding="utf-8")
+    cfg = load_settings(p)
+    assert cfg.autopilot.margin == valid_margin
+
+
+@pytest.mark.parametrize("invalid_margin", [-1, 51])
+def test_margin_out_of_range_raises_usage_error(tmp_path: Path, invalid_margin: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\nmargin = {invalid_margin}\n", encoding="utf-8")
+    with pytest.raises(UsageError) as exc_info:
+        load_settings(p)
+    assert "autopilot.margin" in str(exc_info.value)
+    assert "between 0 and 50" in str(exc_info.value)
+
+
+@pytest.mark.parametrize("valid_cooldown", [60, 300, 86400])
+def test_valid_cooldown_boundary(tmp_path: Path, valid_cooldown: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\ncooldown = {valid_cooldown}\n", encoding="utf-8")
+    cfg = load_settings(p)
+    assert cfg.autopilot.cooldown == valid_cooldown
+
+
+@pytest.mark.parametrize("invalid_cooldown", [59, 86401])
+def test_cooldown_out_of_range_raises_usage_error(tmp_path: Path, invalid_cooldown: int) -> None:
+    p = tmp_path / "settings.toml"
+    p.write_text(f"[autopilot]\ncooldown = {invalid_cooldown}\n", encoding="utf-8")
+    with pytest.raises(UsageError) as exc_info:
+        load_settings(p)
+    assert "autopilot.cooldown" in str(exc_info.value)
+    assert "between 60 and 86400" in str(exc_info.value)
+
+
+def test_dump_toml_flat_tables_and_types() -> None:
+    from mswap.core.settings import dump_toml
+
+    data = {
+        "autopilot": {
+            "threshold": 90,
+            "strategy": "best",
+            "extra_str": "hello\nworld",
+        },
+        "ui": {
+            "ascii": False,
+            "color": "auto",
+        },
+        "updates": {
+            "check": True,
+        },
+        "custom": {
+            "ratio": 3.14,
+            "items": ["a", "b"],
+        },
+    }
+    rendered = dump_toml(data)
+    assert "[autopilot]" in rendered
+    assert "[ui]" in rendered
+    assert "[updates]" in rendered
+    assert "[custom]" in rendered
+    assert "threshold = 90" in rendered
+    assert 'strategy = "best"' in rendered
+    assert "ascii = false" in rendered
+    assert "check = true" in rendered
+    assert 'items = ["a", "b"]' in rendered
+
+    # Roundtrip through tomllib
+    import tomllib
+
+    parsed = tomllib.loads(rendered)
+    assert parsed["autopilot"]["threshold"] == 90
+    assert parsed["autopilot"]["strategy"] == "best"
+    assert parsed["ui"]["ascii"] is False
+    assert parsed["updates"]["check"] is True
+    assert parsed["custom"]["ratio"] == 3.14
+    assert parsed["custom"]["items"] == ["a", "b"]
+
+
+def test_settings_set_and_unset_cleanups(tmp_path: Path) -> None:
+    from mswap.core.settings import (
+        get_setting,
+        list_settings,
+        set_setting,
+        unset_setting,
+    )
+
+    p = tmp_path / "settings.toml"
+    # Setting in fresh file
+    set_setting("autopilot.threshold", 85, path=p)
+    val, is_def = get_setting("autopilot.threshold", path=p)
+    assert val == 85
+    assert is_def is False
+
+    # Setting another section
+    set_setting("ui.ascii", True, path=p)
+    val_ui, is_def_ui = get_setting("ui.ascii", path=p)
+    assert val_ui is True
+    assert is_def_ui is False
+
+    # List
+    items = list_settings(path=p)
+    items_dict = {k: (v, d) for k, v, d in items}
+    assert items_dict["autopilot.threshold"] == (85, False)
+    assert items_dict["ui.ascii"] == (True, False)
+    assert items_dict["updates.check"] == (True, True)
+
+    # Unset threshold
+    unset_setting("autopilot.threshold", path=p)
+    val_after, is_def_after = get_setting("autopilot.threshold", path=p)
+    assert val_after == 90
+    assert is_def_after is True
+
+    # Unset ui.ascii (emptying ui section)
+    unset_setting("ui.ascii", path=p)
+    content = p.read_text(encoding="utf-8")
+    assert "[ui]" not in content
+
+
+def test_settings_unknown_key_in_raw_toml(tmp_path: Path) -> None:
+    from mswap.core.settings import get_setting, unset_setting
+
+    p = tmp_path / "settings.toml"
+    p.write_text('[custom]\nplugin_val = "active"\n', encoding="utf-8")
+
+    val, is_def = get_setting("custom.plugin_val", path=p)
+    assert val == "active"
+    assert is_def is False
+
+    unset_setting("custom.plugin_val", path=p)
+    content = p.read_text(encoding="utf-8")
+    assert "plugin_val" not in content
+
+
+def test_load_raw_toml_syntax_error(tmp_path: Path) -> None:
+    from mswap.core.settings import load_raw_toml
+
+    p = tmp_path / "settings.toml"
+    p.write_text("[broken\nkey = ", encoding="utf-8")
+    with pytest.raises(UsageError) as exc_info:
+        load_raw_toml(p)
+    assert "Failed to parse settings file" in str(exc_info.value)

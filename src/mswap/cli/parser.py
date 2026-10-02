@@ -371,6 +371,33 @@ def build_parser() -> argparse.ArgumentParser:
         help="number of recent events to show (default: 20)",
     )
 
+    # config
+    p_config = subparsers.add_parser(
+        "config",
+        parents=[parent],
+        help="read, write, or list user settings in settings.toml",
+    )
+    p_config.add_argument(
+        "config_action",
+        nargs="?",
+        choices=["get", "set", "unset", "path", "list"],
+        default=None,
+        metavar="ACTION",
+        help="action: get, set, unset, path, or list (default: list)",
+    )
+    p_config.add_argument(
+        "key",
+        nargs="?",
+        default=None,
+        help="configuration key in dotted format (e.g. autopilot.threshold)",
+    )
+    p_config.add_argument(
+        "value",
+        nargs="?",
+        default=None,
+        help="value to set for the configuration key",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

@@ -14,7 +14,7 @@ import traceback
 from typing import Any
 
 from mswap import __version__
-from mswap.cli.commands import add, alias, current, list_, remove, switch, toggle
+from mswap.cli.commands import add, alias, current, doctor, list_, remove, switch, toggle
 from mswap.cli.context import AppContext, get_context
 from mswap.cli.parser import build_parser
 from mswap.core.errors import INTERNAL_ERROR_CODE, MswapError
@@ -31,6 +31,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap alias SELECTOR [NAME]       set or clear (--clear) an account alias
   mswap disable|enable SELECTOR     disable or enable an account
   mswap current                     show active account
+  mswap doctor [--repair] [--online] diagnose environment and accounts
 """
 
 
@@ -57,6 +58,7 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
         "disable": toggle.run,
         "enable": toggle.run,
         "current": current.run,
+        "doctor": doctor.run,
     }
 
     parsed: argparse.Namespace | None = None

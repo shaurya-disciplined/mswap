@@ -184,4 +184,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="show active account",
     )
 
+    # doctor
+    p_doctor = subparsers.add_parser(
+        "doctor",
+        parents=[parent],
+        help="diagnose installation, accounts, storage, and network health",
+    )
+    p_doctor.add_argument(
+        "--repair",
+        action="store_true",
+        default=False,
+        help="repair recoverable issues such as interrupted switches and orphan logins",
+    )
+    p_doctor.add_argument(
+        "--online",
+        action="store_true",
+        default=False,
+        help="run network checks for token refresh and quota API",
+    )
+
     return parser

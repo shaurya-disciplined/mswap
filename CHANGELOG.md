@@ -4,21 +4,24 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-02
+
 ### Added
 
-- Account management commands: remove, alias, enable, disable, current, and add --alias (W1.S6).
-- Structured --json output on all commands matching §A17 schema (W1.S6).
-- Dead-login quarantine; automatic re-detection of agy's sign-in client (W1.S5).
-- Crash-safe switching with journal, rollback and recovery; refuses to overwrite an unsaved login (W1.S4).
+- Diagnostic command `mswap doctor` with 10 offline checks, `--online` quota and refresh checks, and `--repair` automatic recovery (W1.S7).
+- Account management commands: `remove`, `alias`, `enable`, `disable`, `current`, and `add --alias` (W1.S6).
+- Structured `--json` output across all commands adhering to §A17 schema-1 contract (W1.S6, W1.S7).
+- Dead-login quarantine on `invalid_grant` and automatic re-detection of agy's OAuth client (W1.S5).
+- Crash-safe switching transaction engine with journal, rollback, and recovery; refuses to overwrite unsaved logins without `--force` (W1.S4).
 
 ### Changed
 
-- Data moves to %LOCALAPPDATA%\mswap with automatic, non-destructive migration (W1.S3).
-- Errors now have exit codes and hints; --json errors (W1.S1).
+- Migrated account storage to `%LOCALAPPDATA%\mswap` with non-destructive backup (`accounts.v1.bak`) (W1.S3).
+- Hardened error taxonomy with distinct exit codes (1–7, 64), helpful remediation hints, and token redaction (W1.S1).
 
 ### Fixed
 
-- Windows vault errors are readable; credential size checked (W1.S2).
+- Windows Credential Manager integration with readable OS error formatting and 2560-byte blob limit guard (W1.S2).
 
 ## [0.1.0] - 2026-10-02
 
@@ -30,5 +33,6 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - CI workflow (W0.S4).
 - Community files and templates (W0.S5).
 
-[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/shaurya-disciplined/mswap/releases/tag/v0.1.0

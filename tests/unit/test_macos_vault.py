@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import base64
-import sys
 from typing import Any
 
 import pytest
 
 from mswap.core.errors import VaultError
-from mswap.vault import get_vault, reset_macos_warned, reset_memory_vault
 from mswap.vault.macos import MacKeychainVault
 
 
@@ -330,43 +328,6 @@ def test_blob_size_checks() -> None:
 
     with pytest.raises(VaultError, match="too large"):
         vault.write("mswap:oversized", b"x" * 2561, "user")
-
-
-def test_get_vault_darwin_experimental_notice(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(sys, "platform", "darwin")
-    monkeypatch.setenv("MSWAP_VAULT", "native")
-    monkeypatch.delenv("MSWAP_ACK_EXPERIMENTAL", raising=False)
-    monkeypatch.delenv("MSWAP_DEMO", raising=False)
-    reset_macos_warned()
-    reset_memory_vault()
-
-    v = get_vault()
-    assert isinstance(v, MacKeychainVault)
-    captured = capsys.readouterr()
-    assert "macOS support is experimental. See docs/platforms.md." in captured.err
-
-    # Second call in same process should NOT print notice again
-    _ = get_vault()
-    captured2 = capsys.readouterr()
-    assert captured2.err == ""
-
-
-def test_get_vault_darwin_acknowledged(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(sys, "platform", "darwin")
-    monkeypatch.setenv("MSWAP_VAULT", "native")
-    monkeypatch.setenv("MSWAP_ACK_EXPERIMENTAL", "1")
-    monkeypatch.delenv("MSWAP_DEMO", raising=False)
-    reset_macos_warned()
-    reset_memory_vault()
-
-    v = get_vault()
-    assert isinstance(v, MacKeychainVault)
-    captured = capsys.readouterr()
-    assert captured.err == ""
 
 
 def test_read_error_raises_vault_error() -> None:

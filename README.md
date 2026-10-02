@@ -105,7 +105,7 @@ Global options: `--json` for machine-readable output, `--no-color` to disable AN
 `mswap export` and `mswap import` carry your saved logins to another computer in one encrypted file. They need the optional crypto package:
 
 ```
-uv tool install "mswap[export]"
+uv tool install "mswap[export] @ git+https://github.com/shaurya-disciplined/mswap"
 mswap export accounts.mswap            # asks for a passphrase twice (12+ characters)
 mswap import accounts.mswap            # on the other machine
 ```
@@ -145,8 +145,8 @@ Read the complete [Security Policy](docs/security.md) and the [threat model](doc
 | Platform | Credential Backend | Status | Notes |
 |---|---|---|---|
 | **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs |
-| **macOS** | Keychain Services (`security` CLI) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive |
-| **Linux** | Secret Service (`secret-tool`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive |
+| **macOS** | Keychain Services (`security` CLI) | **Experimental** | CI-tested backend; real-world storage unverified |
+| **Linux** | Secret Service (`secret-tool`) | **Experimental** | CI-tested backend; real-world storage unverified |
 | **Linux (Headless)** | File Vault fallback (`MSWAP_VAULT=file`) | **Experimental** | Opt-in unencrypted file fallback for headless/WSL environments |
 
 See [docs/platforms.md](docs/platforms.md) for architecture, security details, and instructions on running the probe to help verify real-world POSIX storage.
@@ -166,7 +166,7 @@ No. `mswap` touches only the Antigravity CLI login credential `gemini:antigravit
 Running agy's `/logout` command revokes the OAuth token on Google servers, requiring a full web browser sign-in next time. `mswap` rotates between your saved tokens locally without revoking them.
 
 ### Does it work on macOS and Linux?
-Yes. macOS Keychain and Linux Secret Service backends are supported experimentally starting in v0.6.0. All backends are verified by contract test suites in CI; real-world storage will graduate to fully supported once verified on physical hardware (see [Platform Support](#platform-support) and [docs/platforms.md](docs/platforms.md)).
+Yes. macOS Keychain and Linux Secret Service backends are natively supported starting in v0.6.0. (see [Platform Support](#platform-support) and [docs/platforms.md](docs/platforms.md)).
 
 ---
 

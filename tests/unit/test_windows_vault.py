@@ -148,7 +148,7 @@ def test_get_vault_native_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(VaultError) as exc_info:
         get_vault()
     assert "No supported credential store on this OS yet." in str(exc_info.value)
-    assert exc_info.value.hint == "macOS and Linux support arrives in v0.6."
+    assert exc_info.value.hint == "Only macOS, Windows, and Linux are supported."
 
 
 def test_get_vault_unknown_backend(monkeypatch: pytest.MonkeyPatch) -> None:

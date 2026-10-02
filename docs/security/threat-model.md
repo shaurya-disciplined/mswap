@@ -1,7 +1,6 @@
 # mswap threat model
 
-Method: STRIDE over mswap's assets and trust boundaries. Written for the v1.0 security review
-(W7.S1). Every threat lists what already mitigates it (with `file:line` or the test that proves
+Method: STRIDE over mswap's assets and trust boundaries. Written for the v1.0 security review. Every threat lists what already mitigates it (with `file:line` or the test that proves
 it) and what was left over. Anything found during the review was fixed in the same change, with a
 test, or is listed in [Residual risks](#residual-risks) with a severity and a reason.
 
@@ -165,7 +164,7 @@ Each is also recorded in the private follow-up list with the same severity.
 
 | ID | Severity | Risk | Why it is accepted |
 |----|----------|------|--------------------|
-| R1 | LOW | `quarantine` events in `events.log` carry an email | Part of the event shape the stability contract (W7.S2) freezes; owner-only file; slot already identifies the account |
+| R1 | LOW | `quarantine` events in `events.log` carry an email | Part of the event shape the stability contract freezes; owner-only file; slot already identifies the account |
 | R2 | LOW | No response-size cap in `UrllibHttp` | Only fixed Google/PyPI hosts over TLS with timeouts; a malicious body needs a TLS compromise. Capping needs the test doubles reworked; revisit if more hosts are ever added |
 | R3 | LOW | On Windows, a custom `MSWAP_HOME` outside `%LOCALAPPDATA%` gets no ACL hardening; on POSIX mswap `chmod 0700`s whatever directory `MSWAP_HOME` names | The default location is already user-only; pointing the data dir elsewhere is an explicit choice |
 | R4 | LOW | `MSWAP_EXPORT_PASSPHRASE` is visible in the process environment | Needed for unattended use; the interactive prompt is the default and the docs say so |

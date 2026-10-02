@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Literal
 
@@ -373,6 +374,40 @@ def check_win_launchers() -> Check:
     )
 
 
+def check_autopilot_writeback(ctx: AppContext) -> Check:
+    """Verify whether agy write-back of old credentials was detected recently."""
+    path = ctx.store.root / "autopilot.json"
+    if not path.exists():
+        return Check(
+            id="autopilot.writeback",
+            status="ok",
+            message="no write-back detected",
+        )
+    with contextlib.suppress(Exception):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        raw = data.get("writeback_suspected_at")
+        if raw:
+            dt = datetime.fromisoformat(str(raw))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=UTC)
+            now = ctx.clock.now()
+            if (now - dt).total_seconds() <= 86400:
+                return Check(
+                    id="autopilot.writeback",
+                    status="warn",
+                    message="agy write-back suspected recently",
+                    hint=(
+                        "A running agy may have restored its old login after a switch. "
+                        "Restart agy after switching, or use `mswap switch --resume`."
+                    ),
+                )
+    return Check(
+        id="autopilot.writeback",
+        status="ok",
+        message="no write-back detected",
+    )
+
+
 def check_net_refresh(ctx: AppContext, accounts: list[Account] | None) -> Check:
     """Online check: refresh access tokens for all non-quarantined accounts."""
     if not accounts:
@@ -522,6 +557,7 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
     checks.append(check_journal(ctx))
     checks.append(check_data_writable(ctx))
     checks.append(check_win_launchers())
+    checks.append(check_autopilot_writeback(ctx))
 
     if getattr(args, "online", False):
         checks.append(check_net_refresh(ctx, accounts))

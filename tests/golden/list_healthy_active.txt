@@ -1,0 +1,7 @@
+[1mmswap[0m[2m · agy accounts[0m
+
+ [36m▸[0m [1m1[0m  alice@example.com [32m(active)[0m  [pro]
+     Gemini        5h    [32m━━━━━━━━━━━[0m[2m─[0m  99% left  [2mresets 16:25 (4h 25m)[0m
+                   week  [32m━━━━━━━━━━━[0m[2m─[0m  99% left  [2mresets Thu 08 Oct 04:00 (5d 16h)[0m
+     Claude & GPT  5h    [32m━━━━━━━━━━━━[0m 100% left
+                   week  [32m━━━━━━━━━━━━[0m 100% left

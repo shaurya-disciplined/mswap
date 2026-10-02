@@ -10,6 +10,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Changed
 
+- Clearer quota bars, plan labels, markers for alias/disabled/quarantined (W3.S3).
 - Sturdier quota parsing with automatic fallback (W3.S1).
 
 ## [0.3.0] - 2026-10-02

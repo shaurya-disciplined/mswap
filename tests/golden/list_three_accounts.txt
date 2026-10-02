@@ -1,0 +1,13 @@
+[1mmswap[0m[2m · agy accounts[0m
+
+ [36m▸[0m [1m1[0m  alice@example.com [32m(active)[0m  [pro]
+     Gemini        5h    [32m━━━━━━━━━━━[0m[2m─[0m  99% left  [2mresets 16:25 (4h 25m)[0m
+                   week  [32m━━━━━━━━━━━[0m[2m─[0m  99% left  [2mresets Thu 08 Oct 04:00 (5d 16h)[0m
+     Claude & GPT  5h    [32m━━━━━━━━━━━━[0m 100% left
+                   week  [32m━━━━━━━━━━━━[0m 100% left
+
+   [1m2[0m  spare2@example.com  · alias work · disabled
+     [31mn/a[0m  token expired and refresh failed: invalid_grant  → sign in as it in agy, then `mswap add`
+
+   [1m3[0m  bob@example.com  · quarantined[2m · 6m ago[0m
+     [31mn/a[0m  saved login expired or revoked  → sign in as it in agy, then `mswap add`

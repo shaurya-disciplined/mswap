@@ -24,6 +24,16 @@ from mswap.util.http import FakeHttp
 from mswap.vault.memory import MemoryVault
 
 
+def pytest_addoption(parser: pytest.Parser) -> None:
+    """Register custom command-line options for test suite."""
+    parser.addoption(
+        "--update-golden",
+        action="store_true",
+        default=False,
+        help="Update golden test output files.",
+    )
+
+
 def make_blob(n: int, *, expiry: str = "2026-10-02T13:00:00.1234567+05:30") -> bytes:
     """Return an agy credential blob shape with fake test tokens."""
     payload = {

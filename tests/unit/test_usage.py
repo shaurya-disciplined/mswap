@@ -106,3 +106,119 @@ def test_quarantined_accounts_never_hit_network(ctx: AppContext, vault: MemoryVa
     assert entry.error is not None
     assert entry.error["kind"] == "quarantined"
     assert "saved login expired or revoked" in entry.error["message"]
+
+
+def test_refresh_usage_fetches_and_persists_plan(ctx: AppContext, vault: MemoryVault) -> None:
+    # Arrange
+    _seed_client_config(ctx.store)
+    now = ctx.clock.now()
+    fresh_expiry = (now + timedelta(hours=2)).isoformat()
+    blob = make_blob(1, expiry=fresh_expiry)
+    vault.write(slot_target(1), blob, "user1@example.com")
+    vault.write(live_target(), blob, "antigravity")
+
+    acc = Account(
+        slot=1,
+        email="user1@example.com",
+        fp="fp00000000000001",
+        added_at=now,
+        updated_at=now,
+        plan=None,
+    )
+    ctx.store.save([acc])
+
+    ctx.http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+        json_response(_load_fixture("quota_summary.json")),
+    )
+    ctx.http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
+        json_response({"paidTier": {"id": "g1-pro-tier"}}),
+    )
+
+    # Act
+    results = refresh_usage(ctx, [acc])
+
+    # Assert
+    assert 1 in results
+    saved_accs = ctx.store.load()
+    assert len(saved_accs) == 1
+    assert saved_accs[0].plan == "g1-pro-tier"
+    assert "plan_fetched_at" in saved_accs[0].extra
+
+
+def test_refresh_usage_plan_cached_daily(ctx: AppContext, vault: MemoryVault) -> None:
+    # Arrange
+    _seed_client_config(ctx.store)
+    now = ctx.clock.now()
+    fresh_expiry = (now + timedelta(hours=2)).isoformat()
+    blob = make_blob(1, expiry=fresh_expiry)
+    vault.write(slot_target(1), blob, "user1@example.com")
+    vault.write(live_target(), blob, "antigravity")
+
+    acc = Account(
+        slot=1,
+        email="user1@example.com",
+        fp="fp00000000000001",
+        added_at=now,
+        updated_at=now,
+        plan="g1-pro-tier",
+        extra={"plan_fetched_at": now.isoformat()},
+    )
+    ctx.store.save([acc])
+
+    ctx.http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+        json_response(_load_fixture("quota_summary.json")),
+    )
+
+    # Act: No route for loadCodeAssist added; if called it would raise AssertionError
+    results = refresh_usage(ctx, [acc], force=True)
+
+    # Assert: Succeeded without error, plan unchanged
+    assert 1 in results
+    assert ctx.store.load()[0].plan == "g1-pro-tier"
+
+
+def test_refresh_usage_plan_failure_ignored(ctx: AppContext, vault: MemoryVault) -> None:
+    # Arrange
+    _seed_client_config(ctx.store)
+    now = ctx.clock.now()
+    fresh_expiry = (now + timedelta(hours=2)).isoformat()
+    blob = make_blob(1, expiry=fresh_expiry)
+    vault.write(slot_target(1), blob, "user1@example.com")
+    vault.write(live_target(), blob, "antigravity")
+
+    acc = Account(
+        slot=1,
+        email="user1@example.com",
+        fp="fp00000000000001",
+        added_at=now,
+        updated_at=now,
+        plan=None,
+    )
+    ctx.store.save([acc])
+
+    ctx.http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
+        json_response(_load_fixture("quota_summary.json")),
+    )
+    from mswap.util.http import HttpResponse
+
+    ctx.http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist",
+        HttpResponse(status=500, body=b"Internal Server Error", headers={}),
+    )
+
+    # Act: refresh_usage ignores plan failure and returns quota snapshot
+    results = refresh_usage(ctx, [acc])
+
+    # Assert
+    assert 1 in results
+    assert results[1].snapshot is not None
+    assert ctx.store.load()[0].plan is None

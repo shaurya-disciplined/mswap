@@ -118,6 +118,18 @@ class Theme:
         """Format text in warning yellow."""
         return self._format("33", s)
 
+    def green(self, s: str) -> str:
+        """Format text in green."""
+        return self._format("32", s)
+
+    def yellow(self, s: str) -> str:
+        """Format text in yellow."""
+        return self._format("33", s)
+
+    def red(self, s: str) -> str:
+        """Format text in red."""
+        return self._format("31", s)
+
     def accent(self, s: str) -> str:
         """Format text in cyan accent."""
         return self._format("36", s)

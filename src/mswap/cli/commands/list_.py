@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 from typing import Any
 
 from mswap.cli.context import AppContext
@@ -11,7 +12,7 @@ from mswap.core.poll_policy import ttl
 from mswap.core.store import find_active, live_target
 from mswap.core.usage import refresh_usage
 from mswap.ui import jsonout
-from mswap.ui.render import format_age, print_quota
+from mswap.ui.render import AccountRow, render_list
 
 
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
@@ -30,7 +31,8 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
 
     force = getattr(args, "refresh", False)
     results = refresh_usage(ctx, accounts, force=force)
-
+    # Reload accounts from store in case refresh_usage updated plan
+    accounts = ctx.store.load()
     now = ctx.clock.now()
 
     if ctx.json:
@@ -85,43 +87,23 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         print(jsonout.ok("list", data), file=ctx.out)
         return 0
 
-    header = ctx.theme.bold("mswap") + ctx.theme.dim(" · agy accounts")
-    print(header, file=ctx.out)
+    rows: list[AccountRow] = []
     for acc in accounts:
         is_active = active is not None and acc.slot == active.slot
         entry = results.get(acc.slot)
         snap = entry.snapshot if entry else None
-        err = entry.error if entry else None
-        err_msg = err.get("message") if err else None
-
-        mark = ctx.theme.accent(ctx.theme.glyph_active) if is_active else " "
-        tag = ctx.theme.ok(" (active)") if is_active else ""
-        alias_str = f"  · alias {acc.alias}" if acc.alias else ""
-        disabled_str = "  · disabled" if acc.disabled else ""
-        slot_str = ctx.theme.bold(str(acc.slot))
-
-        age_suffix = ""
-        if snap is not None and entry is not None:
+        if entry is not None:
             ttl_val = ttl(snap, active=is_active)
             elapsed = (now - entry.fetched_at).total_seconds()
             in_backoff = entry.backoff_until is not None and now < entry.backoff_until
-            if elapsed > ttl_val or in_backoff:
-                age_suffix = ctx.theme.dim(f" · {format_age(int(elapsed))} ago")
+            is_stale_flag = elapsed > ttl_val or in_backoff
+        else:
+            is_stale_flag = True
+        rows.append(AccountRow(account=acc, active=is_active, entry=entry, stale=is_stale_flag))
 
-        print(
-            f"\n {mark} {slot_str}  {acc.email}{tag}{alias_str}{disabled_str}{age_suffix}",
-            file=ctx.out,
-        )
-
-        if snap is not None:
-            if snap.source == "models":
-                print(ctx.theme.dim("  (per-model view: summary unavailable)"), file=ctx.out)
-            for line in print_quota(snap, now):
-                print(line, file=ctx.out)
-            if err_msg:
-                print(f"     {ctx.theme.dim(f'last check failed: {err_msg}')}", file=ctx.out)
-        elif err_msg:
-            print(f"     {ctx.theme.err('n/a')}  {ctx.theme.dim(err_msg)}", file=ctx.out)
+    width = shutil.get_terminal_size((80, 24)).columns
+    for line in render_list(rows, now=now, theme=ctx.theme, width=width, tz=None):
+        print(line, file=ctx.out)
 
     if live and not active:
         msg = (

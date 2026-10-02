@@ -1,0 +1,13 @@
+mswap · agy accounts
+
+ > 1  alice@example.com (active)  [pro]
+     Gemini        5h    ===========-  99% left  resets 16:25 (4h 25m)
+                   week  ===========-  99% left  resets Thu 08 Oct 04:00 (5d 16h)
+     Claude & GPT  5h    ============ 100% left
+                   week  ============ 100% left
+
+   2  spare2@example.com  · alias work · disabled
+     n/a  token expired and refresh failed: invalid_grant  -> sign in as it in agy, then `mswap add`
+
+   3  bob@example.com  · quarantined · 6m ago
+     n/a  saved login expired or revoked  -> sign in as it in agy, then `mswap add`

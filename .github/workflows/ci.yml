@@ -18,6 +18,7 @@ jobs:
       - run: uv run python scripts/check_layers.py
       - run: uv run python scripts/check_privacy.py
       - run: uv run python scripts/check_links.py
+      - run: bash -n scripts/spikes/*.sh
   test:
     needs: quality
     strategy:

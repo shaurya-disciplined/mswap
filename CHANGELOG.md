@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- `mswap completions powershell|bash|zsh|fish` prints a shell completion script generated from the argument parser, with dynamic completion of account selectors (slots, emails and aliases) through a hidden `mswap __complete selectors` that reads `accounts.json` only; install steps in `docs/completions.md` (W6.S3).
 - Polite update check (PyPI JSON, cached 24 h in `update.json`, 3 s timeout, silent on failure) shown as a dim line after human `mswap list` and `mswap doctor`; opt out with `mswap config set updates.check false` or `MSWAP_NO_UPDATE_CHECK=1` (W6.S4).
 - `mswap shim install [--dir DIR] [--force]` writes a Smart App Control-safe `mswap.cmd` that runs `python -m mswap`; `mswap doctor` now points its blocked-launcher warning at it (W6.S4).
 - `mswap config [get KEY | set KEY VALUE | unset KEY | path | list]` to read and write `settings.toml` with validated dotted keys, a tiny flat-table TOML writer that preserves unknown keys (comments are not preserved), and `--json` output (W6.S2).

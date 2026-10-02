@@ -459,6 +459,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="overwrite existing accounts if email matches",
     )
 
+    # completions
+    p_completions = subparsers.add_parser(
+        "completions",
+        parents=[parent],
+        help="print a shell completion script",
+    )
+    p_completions.add_argument(
+        "shell",
+        choices=["powershell", "bash", "zsh", "fish"],
+        metavar="SHELL",
+        help="target shell: powershell, bash, zsh, or fish",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

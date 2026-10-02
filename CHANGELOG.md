@@ -5,7 +5,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ## [Unreleased]
 
 ### Added
-
+- mswap auto with dry-run, JSON events and write-back detection (W4.S2).
 - Added: experimental macOS Keychain support (W5.S2).
 - Pool-aware autopilot policy engine (W4.S1).
 - Safe, read-only diagnostic probe script for agy login storage on macOS and Linux (W5.S1).

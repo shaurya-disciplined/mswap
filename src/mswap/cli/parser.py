@@ -253,6 +253,59 @@ def build_parser() -> argparse.ArgumentParser:
         help="allow switching accounts even if inside agy",
     )
 
+    # auto
+    p_auto = subparsers.add_parser(
+        "auto",
+        parents=[parent],
+        help="automatic account switcher based on quota policy",
+    )
+    p_auto.add_argument(
+        "--once",
+        action="store_true",
+        default=False,
+        help="run a single autopilot tick and exit",
+    )
+    p_auto.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="simulate decisions without switching credentials",
+    )
+    p_auto.add_argument(
+        "--interval",
+        type=int,
+        default=60,
+        metavar="SEC",
+        help="seconds between checks (default: 60)",
+    )
+    p_auto.add_argument(
+        "--threshold",
+        type=int,
+        default=None,
+        metavar="N",
+        help="quota usage threshold percentage to trigger switch",
+    )
+    p_auto.add_argument(
+        "--strategy",
+        choices=["best", "consume-first"],
+        default=None,
+        metavar="S",
+        help="switch strategy: best or consume-first",
+    )
+    p_auto.add_argument(
+        "--focus",
+        choices=["auto", "gemini", "3p", "both"],
+        default=None,
+        metavar="F",
+        help="quota focus: auto, gemini, 3p, or both",
+    )
+    p_auto.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="allow switching accounts even if inside agy",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

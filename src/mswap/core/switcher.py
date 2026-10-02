@@ -6,8 +6,10 @@ Must never leave unsaved live credentials overwritten without explicit force.
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Literal, Protocol
 
 from mswap.agy.process import AgyProcess
@@ -192,6 +194,18 @@ def switch(
             to_slot=target.slot,
             forced=force,
         )
+        with contextlib.suppress(Exception):
+            from mswap.core.autopilot import record_switch_state
+            from mswap.core.store import data_dir
+
+            now_dt = ctx.clock.now() if hasattr(ctx, "clock") else datetime.now(UTC)
+            root = ctx.store.root if hasattr(ctx, "store") else data_dir()
+            record_switch_state(
+                root / "autopilot.json",
+                active.slot if active else None,
+                target.slot,
+                now_dt,
+            )
     return SwitchResult("switched", active, target, agy_running=is_agy_running)
 
 

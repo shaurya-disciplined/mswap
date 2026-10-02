@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "shim",
+  "data": {
+    "path": "<TMP>/shimbin/mswap.cmd",
+    "dir": "<TMP>/shimbin",
+    "backup": null,
+    "on_path": false
+  }
+}

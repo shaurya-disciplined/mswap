@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "config",
+  "data": {
+    "action": "unset",
+    "key": "autopilot.threshold"
+  }
+}

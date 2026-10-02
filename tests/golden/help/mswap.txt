@@ -1,0 +1,22 @@
+mswap: switch Google accounts in agy (Antigravity CLI)
+
+  mswap add [--new] [--alias NAME]  save the account agy is signed in to now
+  mswap list [--refresh]            all accounts with 5h / weekly quota left
+  mswap switch [SELECTOR]           rotate to the next account or switch to SELECTOR
+  mswap remove SELECTOR [--yes]     remove a saved account
+  mswap alias SELECTOR [NAME]       set or clear (--clear) an account alias
+  mswap disable|enable SELECTOR     disable or enable an account
+  mswap current                     show active account
+  mswap status [--format FMT]       cache-only one-liner for shell prompts
+  mswap watch                       live dashboard
+  mswap auto [--once] [--dry-run]   foreground autopilot loop
+  mswap hook install|remove|status  manage agy Stop-hook for autopilot
+  mswap schedule install|remove|status  background autopilot via Task Scheduler
+  mswap shim install [--force]      write a Smart App Control-safe mswap.cmd
+  mswap log [-n 20]                 show audit trail of switches and autopilot
+  mswap config [get|set|unset|path|list] manage settings.toml
+  mswap export FILE [--accounts S]  export accounts to an encrypted bundle
+  mswap import FILE [--force]       import accounts from an encrypted bundle
+  mswap completions SHELL           print a completion script (powershell|bash|zsh|fish)
+  mswap doctor [--repair] [--online] diagnose environment and accounts
+  mswap debug record [--out DIR]    save secret-free API response shapes for a bug report

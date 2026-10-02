@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "status",
+  "data": {
+    "slot": 1,
+    "email": "user1@example.com",
+    "email_short": "user1",
+    "alias": null,
+    "gemini_5h": 99,
+    "gemini_week": 99,
+    "3p_5h": 100,
+    "3p_week": 100,
+    "age": "0s",
+    "formatted": "1:user1 G99% C100%"
+  }
+}

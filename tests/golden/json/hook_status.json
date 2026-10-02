@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "hook",
+  "data": {
+    "installed": true,
+    "command": "\"<PYTHON>\" -P -m mswap auto --once --quiet --from-hook",
+    "hooks_path": "<TMP>/agy-state/hooks.json",
+    "backup_exists": false
+  }
+}

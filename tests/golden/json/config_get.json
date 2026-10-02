@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "config",
+  "data": {
+    "key": "autopilot.threshold",
+    "value": 90,
+    "default": true
+  }
+}

@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- 1.x stability contract and deprecation policy: `docs/stability.md` (W7.S2).
+- Golden contract snapshots for every command's `--json` output (`tests/golden/json/*.json`) and every command's `--help` definition (`tests/golden/help/*.txt`) (W7.S2).
+- Public contract guard (`tests/integration/test_stability_contract.py`) enforcing intentional schema evolution: fails on contract changes unless overridden with `MSWAP_ALLOW_CONTRACT_CHANGE=1`, and rejects JSON removals or renames without incrementing `jsonout.SCHEMA_VERSION` (W7.S2).
+
 ### Security
 
 - Threat model (STRIDE) for assets, trust boundaries and mitigations: `docs/security/threat-model.md` (W7.S1).

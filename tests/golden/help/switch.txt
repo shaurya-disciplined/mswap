@@ -1,0 +1,51 @@
+mswap switch
+summary: switch to another account or rotate
+  argument selector
+    action: _StoreAction
+    nargs: ?
+    default: None
+    help: slot number or email to switch to
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --force
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: force switch even if unsaved live login is present
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option --resume
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: continue the conversation in agy after switching
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit
+  option --wait
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: wait for running agy sessions to exit before switching
+  option --wait-timeout
+    action: _StoreAction
+    type: float
+    default: 0.0
+    help: timeout in seconds when waiting for agy to exit (0 = forever)

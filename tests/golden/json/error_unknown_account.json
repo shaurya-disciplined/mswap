@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": false,
+  "command": "switch",
+  "error": {
+    "code": 64,
+    "kind": "UsageError",
+    "message": "No account matching '7'.",
+    "hint": "See `mswap list`."
+  }
+}

@@ -1,0 +1,35 @@
+mswap remove
+summary: remove a saved account
+  argument selector
+    action: _StoreAction
+    default: None
+    help: slot number, email, or alias
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit
+  option --yes, -y
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: skip confirmation prompt

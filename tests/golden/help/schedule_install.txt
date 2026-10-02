@@ -1,0 +1,32 @@
+mswap schedule install
+summary: register the autopilot scheduled task
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --every
+    action: _StoreAction
+    metavar: MIN
+    type: int
+    default: 5
+    help: run autopilot every MIN minutes (1-60, default: 5)
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit

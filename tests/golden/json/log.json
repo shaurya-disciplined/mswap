@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "log",
+  "data": {
+    "events": [
+      {
+        "at": "<TIMESTAMP>",
+        "event": "switch",
+        "from_slot": 1,
+        "to_slot": 2,
+        "forced": true,
+        "source": "manual"
+      }
+    ]
+  }
+}

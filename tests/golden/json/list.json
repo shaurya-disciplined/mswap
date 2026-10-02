@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "list",
+  "data": {
+    "active_slot": 1,
+    "accounts": [
+      {
+        "slot": 1,
+        "email": "user1@example.com",
+        "alias": "work",
+        "active": true,
+        "disabled": false,
+        "quarantined": null,
+        "plan": "g1-pro-tier",
+        "usage": {
+          "fetched_at": "2026-10-02T12:00:00+00:00",
+          "stale": false,
+          "error": null,
+          "pools": [
+            {
+              "key": "gemini",
+              "name": "Gemini",
+              "buckets": [
+                {
+                  "window": "5h",
+                  "remaining": 0.99,
+                  "reset_at": "2026-10-02T16:00:00+00:00",
+                  "pace": null
+                },
+                {
+                  "window": "weekly",
+                  "remaining": 0.99,
+                  "reset_at": "2026-10-07T12:00:00+00:00",
+                  "pace": {
+                    "expected_used": 0.2857142857142857,
+                    "actual_used": 0.010000000000000009,
+                    "ahead": false,
+                    "exhaust_at": "2027-04-18T12:00:00+00:00",
+                    "lasts_to_reset": true
+                  }
+                }
+              ]
+            },
+            {
+              "key": "3p",
+              "name": "Claude & GPT",
+              "buckets": [
+                {
+                  "window": "5h",
+                  "remaining": 1.0,
+                  "reset_at": null,
+                  "pace": null
+                },
+                {
+                  "window": "weekly",
+                  "remaining": 1.0,
+                  "reset_at": null,
+                  "pace": null
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "slot": 2,
+        "email": "user2@example.com",
+        "alias": null,
+        "active": false,
+        "disabled": false,
+        "quarantined": {
+          "reason": "invalid_grant",
+          "at": "2026-10-02T12:00:00+00:00"
+        },
+        "plan": null,
+        "usage": {
+          "fetched_at": "2026-10-02T12:00:00+00:00",
+          "stale": false,
+          "error": "saved login expired or revoked  → sign in as it in agy, then `mswap add`",
+          "pools": [
+            {
+              "key": "gemini",
+              "name": "Gemini",
+              "buckets": [
+                {
+                  "window": "5h",
+                  "remaining": 0.99,
+                  "reset_at": "2026-10-02T16:00:00+00:00",
+                  "pace": null
+                },
+                {
+                  "window": "weekly",
+                  "remaining": 0.99,
+                  "reset_at": "2026-10-07T12:00:00+00:00",
+                  "pace": {
+                    "expected_used": 0.2857142857142857,
+                    "actual_used": 0.010000000000000009,
+                    "ahead": false,
+                    "exhaust_at": "2027-04-18T12:00:00+00:00",
+                    "lasts_to_reset": true
+                  }
+                }
+              ]
+            },
+            {
+              "key": "3p",
+              "name": "Claude & GPT",
+              "buckets": [
+                {
+                  "window": "5h",
+                  "remaining": 1.0,
+                  "reset_at": null,
+                  "pace": null
+                },
+                {
+                  "window": "weekly",
+                  "remaining": 1.0,
+                  "reset_at": null,
+                  "pace": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

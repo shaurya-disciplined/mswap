@@ -1,0 +1,42 @@
+mswap config
+summary: read, write, or list user settings in settings.toml
+  argument ACTION
+    action: _StoreAction
+    nargs: ?
+    choices: get, set, unset, path, list
+    default: None
+    help: action: get, set, unset, path, or list (default: list)
+  argument key
+    action: _StoreAction
+    nargs: ?
+    default: None
+    help: configuration key in dotted format (e.g. autopilot.threshold)
+  argument value
+    action: _StoreAction
+    nargs: ?
+    default: None
+    help: value to set for the configuration key
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit

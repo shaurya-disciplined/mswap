@@ -1,0 +1,36 @@
+mswap doctor
+summary: diagnose installation, accounts, storage, and network health
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option --online
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: run network checks for token refresh and quota API
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option --repair
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: repair recoverable issues such as interrupted switches and orphan logins
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit

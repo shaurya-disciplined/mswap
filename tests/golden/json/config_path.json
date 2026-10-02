@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "config",
+  "data": {
+    "path": "<TMP>/home/settings.toml",
+    "comments_preserved": false
+  }
+}

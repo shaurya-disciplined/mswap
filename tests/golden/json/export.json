@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "export",
+  "data": {
+    "file": "<TMP>/accounts.mswap",
+    "count": 2
+  }
+}

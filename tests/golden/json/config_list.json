@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "config",
+  "data": {
+    "settings": {
+      "autopilot": {
+        "threshold": 90,
+        "margin": 10,
+        "cooldown": 300,
+        "strategy": "best",
+        "focus": "auto",
+        "hook_action": "notify"
+      },
+      "ui": {
+        "ascii": false,
+        "color": "auto"
+      },
+      "updates": {
+        "check": true
+      }
+    },
+    "defaults": [
+      "autopilot.threshold",
+      "autopilot.margin",
+      "autopilot.cooldown",
+      "autopilot.strategy",
+      "autopilot.focus",
+      "autopilot.hook_action",
+      "ui.ascii",
+      "ui.color",
+      "updates.check"
+    ],
+    "items": [
+      {
+        "key": "autopilot.threshold",
+        "value": 90,
+        "default": true
+      },
+      {
+        "key": "autopilot.margin",
+        "value": 10,
+        "default": true
+      },
+      {
+        "key": "autopilot.cooldown",
+        "value": 300,
+        "default": true
+      },
+      {
+        "key": "autopilot.strategy",
+        "value": "best",
+        "default": true
+      },
+      {
+        "key": "autopilot.focus",
+        "value": "auto",
+        "default": true
+      },
+      {
+        "key": "autopilot.hook_action",
+        "value": "notify",
+        "default": true
+      },
+      {
+        "key": "ui.ascii",
+        "value": false,
+        "default": true
+      },
+      {
+        "key": "ui.color",
+        "value": "auto",
+        "default": true
+      },
+      {
+        "key": "updates.check",
+        "value": true,
+        "default": true
+      }
+    ],
+    "autopilot": {
+      "threshold": 90,
+      "margin": 10,
+      "cooldown": 300,
+      "strategy": "best",
+      "focus": "auto",
+      "hook_action": "notify"
+    },
+    "ui": {
+      "ascii": false,
+      "color": "auto"
+    },
+    "updates": {
+      "check": true
+    }
+  }
+}

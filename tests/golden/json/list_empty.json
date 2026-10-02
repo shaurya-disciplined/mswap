@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "list",
+  "data": {
+    "active_slot": null,
+    "accounts": []
+  }
+}

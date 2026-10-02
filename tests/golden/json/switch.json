@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "switch",
+  "data": {
+    "status": "switched",
+    "from_slot": 1,
+    "to_slot": 2,
+    "agy_running": false
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "current",
+  "data": {
+    "active": {
+      "slot": 1,
+      "email": "user1@example.com",
+      "fp": "dae387c6e5a1c9cb",
+      "added_at": "2026-10-02T12:00:00+00:00",
+      "updated_at": "2026-10-02T12:00:00+00:00",
+      "alias": null,
+      "disabled": false,
+      "quarantined": null,
+      "plan": "g1-pro-tier"
+    },
+    "live_present": true
+  }
+}

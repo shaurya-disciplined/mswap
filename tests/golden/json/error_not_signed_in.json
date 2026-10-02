@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": false,
+  "command": "current",
+  "error": {
+    "code": 4,
+    "kind": "NotSignedIn",
+    "message": "agy isn't signed in.",
+    "hint": "Run `agy`, sign in, then try again."
+  }
+}

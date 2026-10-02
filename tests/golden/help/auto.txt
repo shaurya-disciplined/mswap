@@ -1,0 +1,70 @@
+mswap auto
+summary: automatic account switcher based on quota policy
+  option --ascii
+    action: _StoreTrueAction
+    nargs: 0
+    help: use ASCII characters for symbols and bars
+  option --dry-run
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: simulate decisions without switching credentials
+  option --focus
+    action: _StoreAction
+    metavar: F
+    choices: auto, gemini, 3p, both
+    default: None
+    help: quota focus: auto, gemini, 3p, or both
+  option --force
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: allow switching accounts even if inside agy
+  option --from-hook
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: run from an agy Stop hook (8s budget, never raises, always exit 0)
+  option --interval
+    action: _StoreAction
+    metavar: SEC
+    type: int
+    default: 60
+    help: seconds between checks (default: 60)
+  option --json
+    action: _StoreTrueAction
+    nargs: 0
+    help: output machine-readable JSON
+  option --no-color
+    action: _StoreTrueAction
+    nargs: 0
+    help: disable terminal color output
+  option --once
+    action: _StoreTrueAction
+    nargs: 0
+    default: False
+    help: run a single autopilot tick and exit
+  option -q, --quiet
+    action: _StoreTrueAction
+    nargs: 0
+    help: suppress progress and status messages
+  option --strategy
+    action: _StoreAction
+    metavar: S
+    choices: best, consume-first
+    default: None
+    help: switch strategy: best or consume-first
+  option --threshold
+    action: _StoreAction
+    metavar: N
+    type: int
+    default: None
+    help: quota usage threshold percentage to trigger switch
+  option -v, --verbose
+    action: _StoreTrueAction
+    nargs: 0
+    help: enable verbose diagnostic logging
+  option -V, --version
+    action: _StoreTrueAction
+    nargs: 0
+    help: show version information and exit

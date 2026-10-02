@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "debug",
+  "data": {
+    "dir": "<TMP>/rec",
+    "files": [
+      "env.json",
+      "fetch_available_models.json",
+      "load_code_assist.json",
+      "quota_summary.json"
+    ]
+  }
+}

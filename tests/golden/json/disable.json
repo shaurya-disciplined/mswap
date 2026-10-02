@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "disable",
+  "data": {
+    "slot": 2,
+    "disabled": true
+  }
+}

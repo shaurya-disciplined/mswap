@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "hook",
+  "data": {
+    "action": "install",
+    "changed": true,
+    "hooks_path": "<TMP>/agy-state/hooks.json",
+    "set_name": "mswap-autopilot"
+  }
+}

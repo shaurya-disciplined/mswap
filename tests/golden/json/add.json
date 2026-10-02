@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "add",
+  "data": {
+    "status": "added",
+    "slot": 1,
+    "email": "alice@example.com",
+    "alias": "personal",
+    "signed_out": false
+  }
+}

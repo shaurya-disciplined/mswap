@@ -1,0 +1,162 @@
+{
+  "schema": 1,
+  "ok": true,
+  "command": "doctor",
+  "data": {
+    "checks": [
+      {
+        "id": "agy.installed",
+        "status": "ok",
+        "message": "agy 1.2.12 at <TMP>/bin/agy",
+        "hint": null
+      },
+      {
+        "id": "agy.login",
+        "status": "ok",
+        "message": "agy is signed in",
+        "hint": null
+      },
+      {
+        "id": "agy.client",
+        "status": "ok",
+        "message": "OAuth client configuration valid",
+        "hint": null
+      },
+      {
+        "id": "agy.sessions",
+        "status": "ok",
+        "message": "agy isn't running",
+        "hint": null
+      },
+      {
+        "id": "store.readable",
+        "status": "ok",
+        "message": "2 accounts",
+        "hint": null
+      },
+      {
+        "id": "store.slots",
+        "status": "ok",
+        "message": "all accounts have saved logins",
+        "hint": null
+      },
+      {
+        "id": "store.orphans",
+        "status": "ok",
+        "message": "no orphan saved logins",
+        "hint": null
+      },
+      {
+        "id": "store.active",
+        "status": "ok",
+        "message": "Active: 1 user1@example.com",
+        "hint": null
+      },
+      {
+        "id": "journal",
+        "status": "ok",
+        "message": "switch journal clean",
+        "hint": null
+      },
+      {
+        "id": "data.writable",
+        "status": "ok",
+        "message": "data directory is writable",
+        "hint": null
+      },
+      {
+        "id": "win.launchers",
+        "status": "ok",
+        "message": "no blocked launchers",
+        "hint": null
+      },
+      {
+        "id": "autopilot.writeback",
+        "status": "ok",
+        "message": "no write-back detected",
+        "hint": null
+      }
+    ],
+    "ok": true,
+    "repaired": [
+      "Deleted orphan saved login: slot99"
+    ]
+  },
+  "checks": [
+    {
+      "id": "agy.installed",
+      "status": "ok",
+      "message": "agy 1.2.12 at <TMP>/bin/agy",
+      "hint": null
+    },
+    {
+      "id": "agy.login",
+      "status": "ok",
+      "message": "agy is signed in",
+      "hint": null
+    },
+    {
+      "id": "agy.client",
+      "status": "ok",
+      "message": "OAuth client configuration valid",
+      "hint": null
+    },
+    {
+      "id": "agy.sessions",
+      "status": "ok",
+      "message": "agy isn't running",
+      "hint": null
+    },
+    {
+      "id": "store.readable",
+      "status": "ok",
+      "message": "2 accounts",
+      "hint": null
+    },
+    {
+      "id": "store.slots",
+      "status": "ok",
+      "message": "all accounts have saved logins",
+      "hint": null
+    },
+    {
+      "id": "store.orphans",
+      "status": "ok",
+      "message": "no orphan saved logins",
+      "hint": null
+    },
+    {
+      "id": "store.active",
+      "status": "ok",
+      "message": "Active: 1 user1@example.com",
+      "hint": null
+    },
+    {
+      "id": "journal",
+      "status": "ok",
+      "message": "switch journal clean",
+      "hint": null
+    },
+    {
+      "id": "data.writable",
+      "status": "ok",
+      "message": "data directory is writable",
+      "hint": null
+    },
+    {
+      "id": "win.launchers",
+      "status": "ok",
+      "message": "no blocked launchers",
+      "hint": null
+    },
+    {
+      "id": "autopilot.writeback",
+      "status": "ok",
+      "message": "no write-back detected",
+      "hint": null
+    }
+  ],
+  "repaired": [
+    "Deleted orphan saved login: slot99"
+  ]
+}

@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
 
                 av = agy_version(agy_exe(), cache)
                 agy_part = f" (agy {av})" if av and av != "0.0.0" else " (agy not found)"
-            except Exception:  # noqa: BLE001
+            except Exception:
                 agy_part = " (agy not found)"
 
             print(f"mswap {__version__}{agy_part} · not affiliated with Google")

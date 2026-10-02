@@ -39,6 +39,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap config [get|set|unset|path|list] manage settings.toml
   mswap export FILE [--accounts S]  export accounts to an encrypted bundle
   mswap import FILE [--force]       import accounts from an encrypted bundle
+  mswap completions SHELL           print a completion script (powershell|bash|zsh|fish)
   mswap doctor [--repair] [--online] diagnose environment and accounts
 """
 
@@ -118,6 +119,10 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import config
 
             return int(config.run(app_ctx, parsed))
+        case "completions":
+            from mswap.cli.commands import completions
+
+            return int(completions.run(app_ctx, parsed))
         case "__demo-seed":
             if os.environ.get("MSWAP_DEMO") == "1":
                 from mswap.cli.commands import demo_seed
@@ -145,6 +150,13 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
     cmd_name = next((arg for arg in args_list if not arg.startswith("-")), "")
 
     try:
+        if args_list[:1] == ["__complete"]:
+            # Hidden helper for the completion scripts: kept out of the parser so it never
+            # shows in usage text, error messages or the generated scripts.
+            from mswap.cli.commands import complete
+
+            return int(complete.run(ctx or get_context(None), args_list[1:]))
+
         parser = build_parser()
         parsed = parser.parse_args(args_list)
 

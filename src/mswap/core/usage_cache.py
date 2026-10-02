@@ -12,7 +12,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from mswap.agy.api import AgyApi
 from mswap.core.errors import LockTimeout
 from mswap.core.locking import FileLock
 from mswap.core.models import QuotaSnapshot
@@ -62,6 +61,8 @@ class CacheEntry:
             snapshot = raw_snap
         elif "groups" in d and isinstance(d["groups"], list):
             # Compatibility with demo seed groups shape
+            from mswap.agy.api import AgyApi
+
             snapshot = AgyApi._parse_summary({"groups": d["groups"]}, fetched_at)
 
         raw_err = d.get("error")

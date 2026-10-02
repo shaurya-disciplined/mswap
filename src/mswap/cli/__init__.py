@@ -11,13 +11,11 @@ import contextlib
 import os
 import sys
 import traceback
-from typing import Any
 
 from mswap import __version__
-from mswap.cli.commands import add, alias, current, doctor, list_, remove, switch, toggle
 from mswap.cli.context import AppContext, get_context
 from mswap.cli.parser import build_parser
-from mswap.core.errors import INTERNAL_ERROR_CODE, MswapError
+from mswap.core.errors import INTERNAL_ERROR_CODE, MswapError, UsageError
 from mswap.ui import jsonout
 from mswap.ui.theme import bold, theme_from
 from mswap.util.redact import redact
@@ -31,8 +29,63 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap alias SELECTOR [NAME]       set or clear (--clear) an account alias
   mswap disable|enable SELECTOR     disable or enable an account
   mswap current                     show active account
+  mswap status [--format FMT]       cache-only one-liner for shell prompts
+  mswap watch                       live dashboard
   mswap doctor [--repair] [--online] diagnose environment and accounts
 """
+
+
+def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Namespace) -> int:
+    """Lazily load and execute command runner."""
+    match cmd_name:
+        case "add":
+            from mswap.cli.commands import add
+
+            return int(add.run(app_ctx, parsed))
+        case "list" | "ls":
+            from mswap.cli.commands import list_
+
+            return int(list_.run(app_ctx, parsed))
+        case "switch":
+            from mswap.cli.commands import switch
+
+            return int(switch.run(app_ctx, parsed))
+        case "remove":
+            from mswap.cli.commands import remove
+
+            return int(remove.run(app_ctx, parsed))
+        case "alias":
+            from mswap.cli.commands import alias
+
+            return int(alias.run(app_ctx, parsed))
+        case "disable" | "enable":
+            from mswap.cli.commands import toggle
+
+            return int(toggle.run(app_ctx, parsed))
+        case "current":
+            from mswap.cli.commands import current
+
+            return int(current.run(app_ctx, parsed))
+        case "status":
+            from mswap.cli.commands import status
+
+            return int(status.run(app_ctx, parsed))
+        case "watch":
+            from mswap.cli.commands import watch
+
+            return int(watch.run(app_ctx, parsed))
+        case "doctor":
+            from mswap.cli.commands import doctor
+
+            return int(doctor.run(app_ctx, parsed))
+        case "__demo-seed":
+            if os.environ.get("MSWAP_DEMO") == "1":
+                from mswap.cli.commands import demo_seed
+
+                return int(demo_seed.run(app_ctx, parsed))
+            raise UsageError(f"Unknown command: {cmd_name}")
+        case _:
+            raise UsageError(f"Unknown command: {cmd_name}")
 
 
 def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
@@ -47,24 +100,6 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
     if args_list == ["help"] or args_list in (["-h"], ["--help"]):
         print(HELP_TEXT)
         return 0
-
-    commands: dict[str, Any] = {
-        "add": add.run,
-        "list": list_.run,
-        "ls": list_.run,
-        "switch": switch.run,
-        "remove": remove.run,
-        "alias": alias.run,
-        "disable": toggle.run,
-        "enable": toggle.run,
-        "current": current.run,
-        "doctor": doctor.run,
-    }
-
-    if os.environ.get("MSWAP_DEMO") == "1":
-        from mswap.cli.commands import demo_seed
-
-        commands["__demo-seed"] = demo_seed.run
 
     parsed: argparse.Namespace | None = None
     cmd_name = next((arg for arg in args_list if not arg.startswith("-")), "")
@@ -82,12 +117,14 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
         if not parsed.command:
             accounts = app_ctx.store.load()
             if len(accounts) >= 1 or getattr(parsed, "json", False):
+                from mswap.cli.commands import list_
+
                 return int(list_.run(app_ctx, parsed))
             print(HELP_TEXT)
             return 0
 
         cmd_name = str(parsed.command)
-        return int(commands[cmd_name](app_ctx, parsed))
+        return _dispatch_command(cmd_name, app_ctx, parsed)
 
     except KeyboardInterrupt:
         return 130

@@ -1,4 +1,4 @@
-#!/bin/sh
+﻿#!/bin/sh
 set -e
 
 echo "Installing mswap..."
@@ -15,7 +15,7 @@ if [ -z "$latest" ] || [ "$latest" = "null" ]; then
     latest="main"
 fi
 
-uv tool install "git+https://github.com/shaurya-disciplined/mswap@$latest"
+uv tool install --force "git+https://github.com/shaurya-disciplined/mswap@$latest"
 
 echo "mswap installed successfully!"
 echo "Next steps:"

@@ -10,6 +10,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+from mswap.agy.process import AgyProcess
 from mswap.agy.tokens import validate_blob
 from mswap.core.errors import (
     CorruptState,
@@ -52,6 +53,9 @@ class SwitchContext(Protocol):
 
     @property
     def events(self) -> Events: ...
+
+    @property
+    def procs(self) -> Callable[[], list[AgyProcess]]: ...
 
 
 @dataclass(frozen=True)
@@ -136,8 +140,10 @@ def switch(
             active,
             include_disabled=include_disabled_in_rotation,
         )
+        procs_fn = getattr(ctx, "procs", None)
+        is_agy_running = bool(procs_fn()) if callable(procs_fn) else False
         if active and target.slot == active.slot:
-            return SwitchResult("already_active", active, target, agy_running=False)
+            return SwitchResult("already_active", active, target, agy_running=is_agy_running)
         if live is not None and active is None and not force:
             raise UnsafeOperation(
                 "agy is signed in to an account mswap hasn't saved.",
@@ -186,7 +192,7 @@ def switch(
             to_slot=target.slot,
             forced=force,
         )
-    return SwitchResult("switched", active, target, agy_running=False)
+    return SwitchResult("switched", active, target, agy_running=is_agy_running)
 
 
 def sign_out_live(ctx: SwitchContext) -> None:

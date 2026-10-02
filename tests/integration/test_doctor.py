@@ -385,7 +385,7 @@ def test_doctor_json_shape(
     assert isinstance(payload.get("data"), dict)
 
     data_checks = payload["data"]["checks"]
-    assert len(data_checks) == 10
+    assert len(data_checks) == 11
     for chk in data_checks:
         assert "id" in chk
         assert chk["status"] in ("ok", "warn", "fail")

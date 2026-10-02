@@ -142,6 +142,24 @@ def check_agy_client(exe: Path, cache_file: Path) -> Check:
     )
 
 
+def check_agy_sessions(ctx: AppContext) -> Check:
+    """Verify whether any agy processes are currently running."""
+    procs_fn = getattr(ctx, "procs", None)
+    procs = procs_fn() if callable(procs_fn) else []
+    n = len(procs)
+    if n == 0:
+        return Check(
+            id="agy.sessions",
+            status="ok",
+            message="agy isn't running",
+        )
+    return Check(
+        id="agy.sessions",
+        status="warn",
+        message=f"{n} agy session(s) running",
+    )
+
+
 def check_store_readable(ctx: AppContext) -> tuple[Check, list[Account] | None]:
     """Verify that accounts.json loads correctly."""
     try:
@@ -493,6 +511,7 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
     checks.append(check_agy_installed(exe, cache))
     checks.append(check_agy_login(ctx))
     checks.append(check_agy_client(exe, cache_file))
+    checks.append(check_agy_sessions(ctx))
 
     chk_store, accounts = check_store_readable(ctx)
     checks.append(chk_store)

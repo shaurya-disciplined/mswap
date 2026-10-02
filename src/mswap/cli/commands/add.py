@@ -8,7 +8,7 @@ import dataclasses
 from mswap.agy.api import whoami
 from mswap.agy.tokens import TokenService, fingerprint
 from mswap.cli.context import AppContext
-from mswap.core.errors import NotSignedIn, UsageError
+from mswap.core.errors import NotSignedIn, UnsafeOperation, UsageError
 from mswap.core.models import ALIAS_REGEX, Account, validate_alias
 from mswap.core.store import (
     LIVE_USER,
@@ -27,7 +27,29 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
         print(ctx.theme.dim(recovery_msg), file=ctx.err)
 
     new = getattr(args, "new", False) if isinstance(args, argparse.Namespace) else ("--new" in args)
+    force = (
+        getattr(args, "force", False)
+        if isinstance(args, argparse.Namespace)
+        else ("--force" in args)
+    )
     alias = getattr(args, "alias", None) if isinstance(args, argparse.Namespace) else None
+
+    if new:
+        is_inside = ctx.inside_agy() if callable(getattr(ctx, "inside_agy", None)) else False
+        if is_inside:
+            if not force:
+                raise UnsafeOperation(
+                    "You're running mswap inside agy. "
+                    "Switching changes the login this agy session uses.",
+                    hint="Run with --force to switch anyway.",
+                )
+            print(
+                ctx.theme.warn(
+                    "! You're running mswap inside agy. "
+                    "Switching changes the login this agy session uses."
+                ),
+                file=ctx.err,
+            )
     if alias is not None and not ALIAS_REGEX.match(alias):
         raise UsageError(
             "Invalid alias name.",

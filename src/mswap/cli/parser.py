@@ -92,6 +92,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="human-friendly name for this account",
     )
+    p_add.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="force add/sign-out even if inside agy",
+    )
 
     # list / ls
     p_list = subparsers.add_parser(
@@ -124,6 +130,24 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help="force switch even if unsaved live login is present",
+    )
+    p_switch.add_argument(
+        "--wait",
+        action="store_true",
+        default=False,
+        help="wait for running agy sessions to exit before switching",
+    )
+    p_switch.add_argument(
+        "--wait-timeout",
+        type=float,
+        default=0.0,
+        help="timeout in seconds when waiting for agy to exit (0 = forever)",
+    )
+    p_switch.add_argument(
+        "--resume",
+        action="store_true",
+        default=False,
+        help="continue the conversation in agy after switching",
     )
 
     # remove

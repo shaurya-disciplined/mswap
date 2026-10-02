@@ -142,6 +142,10 @@ def ctx(vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path) 
         ),
         journal=journal,
         events=events,
+        procs=lambda: [],
+        inside_agy=lambda: False,
+        sleep=lambda s: clock.advance(s),
+        runner=lambda cmd: 0,
     )
 
 
@@ -170,6 +174,10 @@ def _inject_test_context(
         ),
         journal=journal,
         events=events,
+        procs=lambda: [],
+        inside_agy=lambda: False,
+        sleep=lambda s: clock.advance(s),
+        runner=lambda cmd: 0,
     )
     set_context(app_ctx)
     yield

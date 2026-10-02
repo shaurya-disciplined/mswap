@@ -6,10 +6,18 @@ import argparse
 import dataclasses
 import os
 import sys
-from collections.abc import Callable, Mapping
+import time
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TextIO
 
+from mswap.agy.process import (
+    AgyProcess,
+    running_agy,
+)
+from mswap.agy.process import (
+    inside_agy as default_inside_agy,
+)
 from mswap.core.events import Events
 from mswap.core.journal import Journal
 from mswap.core.locking import FileLock
@@ -33,6 +41,12 @@ def _default_events() -> Events:
     return Events(data_dir() / "events.log")
 
 
+def _default_runner(cmd: Sequence[str]) -> int:
+    import subprocess
+
+    return subprocess.run(cmd, check=False).returncode  # noqa: S603 - execute agy command with static arguments
+
+
 @dataclass
 class AppContext:
     """Execution context carrying shared services and configuration."""
@@ -50,6 +64,10 @@ class AppContext:
     lock: Callable[..., FileLock] = _default_lock
     journal: Journal = field(default_factory=_default_journal)
     events: Events = field(default_factory=_default_events)
+    procs: Callable[[], list[AgyProcess]] = field(default_factory=lambda: running_agy)
+    inside_agy: Callable[[], bool] = field(default_factory=lambda: default_inside_agy)
+    sleep: Callable[[float], None] = time.sleep
+    runner: Callable[[list[str]], int] = _default_runner
 
 
 _ACTIVE_CONTEXT: AppContext | None = None
@@ -85,6 +103,10 @@ def default_context(args: argparse.Namespace | None = None) -> AppContext:
         ),
         journal=Journal(home / "journal.json"),
         events=Events(home / "events.log"),
+        procs=running_agy,
+        inside_agy=default_inside_agy,
+        sleep=time.sleep,
+        runner=_default_runner,
     )
 
 

@@ -1,28 +1,40 @@
 """CLI command for ``mswap schedule install|remove|status [--every MIN]``.
 
-Registers a per-user Windows scheduled task that runs ``mswap auto --once``
-silently every N minutes with no console window flashing.
+Registers a per-user background scheduled task that runs ``mswap auto --once``
+silently every N minutes.
 
-Non-Windows platforms get a clear error with a hint about future support.
+Supports Windows (Task Scheduler), macOS (launchd), and Linux (systemd user timers).
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
+from typing import Any
 
 from mswap.cli.context import AppContext
 from mswap.core.errors import UsageError
 
 
+def _get_scheduler() -> Any:
+    """Return platform-appropriate scheduler module."""
+    if sys.platform == "win32":
+        from mswap.util import schedule_win
+
+        return schedule_win
+    if sys.platform == "darwin" or sys.platform.startswith("linux"):
+        from mswap.util import schedule_posix
+
+        return schedule_posix
+    raise UsageError(
+        f"Scheduling is not supported on platform '{sys.platform}'.",
+        hint="Supported platforms: Windows (Task Scheduler), macOS (launchd), Linux (systemd).",
+    )
+
+
 def _check_platform() -> None:
-    """Raise ``UsageError`` on non-Windows platforms."""
-    if sys.platform != "win32":
-        raise UsageError(
-            "Scheduling is Windows-only for now.",
-            hint="On macOS/Linux, run `mswap auto` in a terminal "
-            "(launchd/systemd support arrives in v0.6).",
-        )
+    """Validate that the current platform supports scheduling."""
+    _get_scheduler()
 
 
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
@@ -36,32 +48,29 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
             "or `mswap schedule status`.",
         )
 
-    _check_platform()
-
-    from mswap.util import schedule_win
+    scheduler = _get_scheduler()
 
     if action == "install":
         every: int = getattr(args, "every", 5) or 5
-        msg = schedule_win.install(every=every)
+        msg = scheduler.install(every=every)
         print(msg, file=ctx.out)
         return 0
 
     if action == "remove":
-        msg = schedule_win.remove()
+        msg = scheduler.remove()
         print(msg, file=ctx.out)
         return 0
 
     if action == "status":
-        return _run_status(ctx)
+        return _run_status(ctx, scheduler)
 
     raise UsageError(f"Unknown schedule action: {action}")
 
 
-def _run_status(ctx: AppContext) -> int:
+def _run_status(ctx: AppContext, scheduler: Any = None) -> int:
     """Display scheduled task status and recent autopilot events."""
-    from mswap.util import schedule_win
-
-    task = schedule_win.query()
+    sched = scheduler if scheduler is not None else _get_scheduler()
+    task = sched.query()
 
     if not task["installed"]:
         print("Not installed.", file=ctx.out)
@@ -73,7 +82,7 @@ def _run_status(ctx: AppContext) -> int:
         )
         return 0
 
-    print(f'Scheduled task "{schedule_win.TASK_NAME}":', file=ctx.out)
+    print(f'Scheduled task "{sched.TASK_NAME}":', file=ctx.out)
     if task["status"] is not None:
         print(f"  Status:        {task['status']}", file=ctx.out)
     if task["next_run_time"] is not None:

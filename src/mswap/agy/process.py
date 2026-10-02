@@ -145,11 +145,35 @@ def _snapshot_tasklist() -> list[tuple[int, int, str]]:
         return []
 
 
-def _snapshot_posix() -> list[tuple[int, int, str]]:
+def parse_ps_output(output: str) -> list[tuple[int, int, str]]:
+    """Parse `ps -axo pid=,ppid=,comm=` output into (pid, ppid, basename(comm))."""
+    procs: list[tuple[int, int, str]] = []
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        parts = line.split(maxsplit=2)
+        if len(parts) >= 3:
+            try:
+                pid = int(parts[0])
+                ppid = int(parts[1])
+            except ValueError:
+                continue
+            comm = parts[2].strip()
+            # Normalize slashes and extract basename (handles paths, spaces, and long names)
+            base_comm = comm.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+            procs.append((pid, ppid, base_comm))
+    return procs
+
+
+def _snapshot_posix(
+    runner: Callable[..., subprocess.CompletedProcess[str]] | None = None,
+) -> list[tuple[int, int, str]]:
     """Capture process table via ps on POSIX systems."""
     try:
         bin_path = shutil.which("ps") or "ps"
-        res = subprocess.run(  # noqa: S603 - run system ps with static args
+        run_fn = runner or subprocess.run
+        res = run_fn(
             [bin_path, "-axo", "pid=,ppid=,comm="],
             capture_output=True,
             text=True,
@@ -158,18 +182,7 @@ def _snapshot_posix() -> list[tuple[int, int, str]]:
         )
         if res.returncode != 0:
             return []
-        procs: list[tuple[int, int, str]] = []
-        for line in res.stdout.splitlines():
-            parts = line.strip().split(maxsplit=2)
-            if len(parts) >= 3:
-                try:
-                    pid = int(parts[0])
-                    ppid = int(parts[1])
-                except ValueError:
-                    continue
-                comm = parts[2].strip()
-                procs.append((pid, ppid, comm))
-        return procs
+        return parse_ps_output(res.stdout)
     except Exception:
         return []
 
@@ -194,7 +207,8 @@ def running_agy(
     for pid, _, exe in snapshot:
         exe_lower = exe.lower()
         exe_name = Path(exe).name.lower()
-        if exe_lower == "agy.exe" or exe_name in ("agy.exe", "agy"):
+        if exe_lower in ("agy.exe", "agy") or exe_name in ("agy.exe", "agy"):
+            # On POSIX, started_at is None unless time_fn is explicitly provided
             started_at = get_time(pid) if (time_fn is not None or sys.platform == "win32") else None
             procs.append(AgyProcess(pid=pid, started_at=started_at))
     return procs

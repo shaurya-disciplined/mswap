@@ -387,19 +387,21 @@ class TestScheduleCLI:
         """Default to Windows platform for CLI tests, except where overridden."""
         monkeypatch.setattr(sys, "platform", "win32")
 
-    def test_non_windows_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Schedule on non-Windows raises UsageError."""
+    def test_unsupported_platform_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Schedule on unsupported platform (e.g. freebsd) raises UsageError."""
         from mswap.cli.commands import schedule as sched_mod
 
-        monkeypatch.setattr(sys, "platform", "linux")
-        with pytest.raises(UsageError, match=r"Windows-only"):
+        monkeypatch.setattr(sys, "platform", "freebsd")
+        with pytest.raises(UsageError, match=r"Scheduling is not supported"):
             sched_mod._check_platform()
 
-    def test_main_on_non_windows_returns_usage_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """main(['schedule', 'status']) returns exit code 64 on non-Windows."""
+    def test_main_on_unsupported_platform_returns_usage_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """main(['schedule', 'status']) returns exit code 64 on unsupported platform."""
         from mswap.cli import main
 
-        monkeypatch.setattr(sys, "platform", "linux")
+        monkeypatch.setattr(sys, "platform", "freebsd")
         code = main(["schedule", "status"])
         assert code == 64
 

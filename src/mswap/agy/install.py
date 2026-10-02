@@ -11,7 +11,8 @@ from typing import Any
 
 def _exe_sig(exe: Path) -> str:
     try:
-        st = exe.stat()
+        resolved = exe.resolve()
+        st = resolved.stat()
         return f"{st.st_size}:{int(st.st_mtime)}"
     except OSError:
         return ""

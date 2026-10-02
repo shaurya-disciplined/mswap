@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- Safe, read-only diagnostic probe script for agy login storage on macOS and Linux (W5.S1).
+
 ## [0.4.0] - 2026-10-02
 
 ### Added

@@ -2,11 +2,16 @@
   <img src="docs/assets/logo.svg" alt="mswap" width="240" />
 </p>
 
-<p align="center"><em>Unbreakable agy sessions.</em></p>
+<p align="center">
+  <strong>mswap 1.0</strong> — <em>Unbreakable agy sessions.</em>
+</p>
 
-[![ci](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml/badge.svg)](https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/mswap)](https://pypi.org/project/mswap/)
-[![license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml"><img src="https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml/badge.svg" alt="ci" /></a>
+  <a href="https://pypi.org/project/mswap/"><img src="https://img.shields.io/pypi/v/mswap" alt="PyPI" /></a>
+  <a href="https://github.com/shaurya-disciplined/mswap/releases"><img src="https://img.shields.io/badge/version-1.0.0-cyan.svg" alt="version 1.0.0" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license" /></a>
+</p>
 
 <p align="center">
   <img src="docs/assets/demo.gif" alt="mswap demo" width="700" />
@@ -17,6 +22,8 @@
 - **Pool-aware quota tracking**: View all your accounts' 5-hour and weekly quota pools (Gemini, Claude & GPT) in a single unified dashboard.
 - **One-second switching**: Switch accounts instantly without manual `/logout`, browser authentication popups, or lost session context.
 - **Zero data loss**: Every switch is transactional, journaled, and backed up before writing. If anything fails, it rolls back automatically.
+- **1.0 stability contract**: Frozen CLI grammar, semantic exit codes, and Schema 1 JSON output protected by automated golden snapshots ([stability contract](docs/stability.md)).
+- **Hardened security**: Comprehensive STRIDE threat model ([threat model](docs/security/threat-model.md)), zero tokens on disk, zero repo secrets, and strict file isolation.
 
 ## Install
 

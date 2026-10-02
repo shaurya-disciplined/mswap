@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from mswap.util.clock import Clock
+from mswap.util.fsx import write_private_text
 from mswap.util.http import Http
 
 PYPI_URL = "https://pypi.org/pypi/mswap/json"
@@ -74,10 +75,7 @@ def _read_cache(path: Path) -> tuple[datetime, str | None] | None:
 def _write_cache(path: Path, checked_at: datetime, latest: str | None) -> None:
     payload = {"checked_at": checked_at.isoformat(), "latest": latest}
     with contextlib.suppress(OSError):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(payload), encoding="utf-8")
-        tmp.replace(path)
+        write_private_text(path, json.dumps(payload))
 
 
 def _fetch_latest(http: Http) -> str | None:

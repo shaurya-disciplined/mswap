@@ -20,16 +20,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: false
 
       - name: Verify published package from PyPI
         shell: bash
+        env:
+          # Passed through the environment, never interpolated into the script: a tag name is
+          # attacker-shaped text as far as the shell is concerned.
+          TAG: ${{ github.event.release.tag_name }}
+          RUNNER_LABEL: ${{ matrix.os }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
           VERSION="${TAG#v}"
-          echo "Verifying mswap $VERSION installation from PyPI on ${{ matrix.os }}..."
+          echo "Verifying mswap $VERSION installation from PyPI on $RUNNER_LABEL..."
           success=0
           for attempt in 1 2 3 4 5; do
             echo "Attempt $attempt of 5 (waiting for PyPI propagation)..."

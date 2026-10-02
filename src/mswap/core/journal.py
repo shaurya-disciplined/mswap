@@ -38,6 +38,7 @@ from pathlib import Path
 from typing import Any
 
 from mswap.core.errors import CorruptState
+from mswap.util.fsx import write_private_text
 
 VALID_STATES = {"begun", "committed", "failed"}
 
@@ -69,11 +70,7 @@ class Journal:
             ) from e
 
     def _write_atomic(self, payload: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp_path = self.path.with_name(f"{self.path.name}.tmp")
-        data = json.dumps(payload, indent=2, ensure_ascii=False)
-        tmp_path.write_text(data, encoding="utf-8")
-        tmp_path.replace(self.path)
+        write_private_text(self.path, json.dumps(payload, indent=2, ensure_ascii=False))
 
     def begin(
         self,

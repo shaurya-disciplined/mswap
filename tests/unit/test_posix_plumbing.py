@@ -285,6 +285,7 @@ class TestSchedulePosixMac:
         assert parsed["Label"] == "dev.mswap.autopilot"
         assert parsed["ProgramArguments"] == [
             "/usr/local/bin/python3",
+            "-P",
             "-m",
             "mswap",
             "auto",
@@ -396,12 +397,12 @@ class TestSchedulePosixLinux:
         """build_systemd_service generates oneshot service with ExecStart."""
         svc = schedule_posix.build_systemd_service(python_bin="/usr/bin/python3")
         assert "Type=oneshot" in svc
-        assert "ExecStart=/usr/bin/python3 -m mswap auto --once --quiet" in svc
+        assert "ExecStart=/usr/bin/python3 -P -m mswap auto --once --quiet" in svc
 
     def test_build_systemd_service_quotes_spaces(self) -> None:
         """ExecStart quotes python executable containing spaces."""
         svc = schedule_posix.build_systemd_service(python_bin="/home/user/my venv/bin/python")
-        assert 'ExecStart="/home/user/my venv/bin/python" -m mswap auto --once --quiet' in svc
+        assert 'ExecStart="/home/user/my venv/bin/python" -P -m mswap auto --once --quiet' in svc
 
     def test_build_systemd_timer_text(self) -> None:
         """build_systemd_timer configures OnBootSec=2min and OnUnitActiveSec={every}min."""

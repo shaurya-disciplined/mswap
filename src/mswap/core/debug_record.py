@@ -39,6 +39,12 @@ def scan_text(text: str) -> list[str]:
     return [name for name, pattern in _SECRET_PATTERNS.items() if pattern.search(text)]
 
 
+# Quota figures are fractions and small counts. A number this large is far more likely to be an
+# identifier (a Google Cloud project number has 12 digits) or an epoch timestamp, so only its
+# size is kept.
+_MAX_PLAIN_NUMBER = 10**9
+
+
 def _placeholder(value: str) -> str:
     return f"<str:{len(value)}>"
 
@@ -49,7 +55,9 @@ def _keep_string(value: str) -> str:
 
 
 def shape(value: Any, *, keep: bool = False) -> Any:
-    """Reduce `value` to its shape: strings -> `<str:N>`, numbers/bools/null kept as they are.
+    """Reduce `value` to its shape: strings -> `<str:N>`, small numbers/bools/null kept as is.
+
+    Numbers of 10 or more digits become `<int:N>` / `<num>` (see `_MAX_PLAIN_NUMBER`).
 
     `keep` is True for the direct value (or list items) of an allow-listed key.
     """
@@ -59,4 +67,10 @@ def shape(value: Any, *, keep: bool = False) -> Any:
         return [shape(v, keep=keep) for v in value]
     if isinstance(value, str):
         return _keep_string(value) if keep else _placeholder(value)
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and abs(value) >= _MAX_PLAIN_NUMBER:
+        return f"<int:{len(str(abs(value)))}>"
+    if isinstance(value, float) and abs(value) >= _MAX_PLAIN_NUMBER:
+        return "<num>"
     return value

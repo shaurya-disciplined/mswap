@@ -16,6 +16,7 @@ from typing import Any
 from mswap.cli.context import AppContext
 from mswap.core.errors import UsageError
 from mswap.ui import jsonout
+from mswap.util.shellquote import RUN_MODULE, quote_cmd_batch
 
 SHIM_NAME = "mswap.cmd"
 SHIM_MARKER = "-m mswap"
@@ -23,7 +24,7 @@ SHIM_MARKER = "-m mswap"
 
 def shim_text(python: str) -> str:
     """Return the shim file content (CRLF line ending, as cmd.exe expects)."""
-    return f'@"{python}" {SHIM_MARKER} %*\r\n'
+    return f"@{quote_cmd_batch(python)} {RUN_MODULE} %*\r\n"
 
 
 def default_shim_dir(env: Any) -> Path:

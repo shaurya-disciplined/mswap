@@ -24,11 +24,16 @@ All vulnerability reports are investigated promptly through GitHub Private Vulne
 - **Passwords:** `mswap` never asks for, manages, or stores account passwords.
 - **Remote Telemetry:** `mswap` has no telemetry, analytics, or third-party servers. All requests go directly to Google's official endpoints for token exchange and quota retrieval.
 
+## Threat Model
+
+[docs/security/threat-model.md](docs/security/threat-model.md) lists mswap's assets, trust
+boundaries and what protects each one, including the risks that are accepted on purpose.
+
 ## Supported Versions
 
 Only the latest minor release receives active security updates and patches.
 
 | Version | Supported |
 | ------- | --------- |
-| 0.1.x   | Yes       |
-| < 0.1   | No        |
+| 0.9.x   | Yes       |
+| < 0.9   | No        |

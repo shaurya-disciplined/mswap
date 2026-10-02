@@ -15,6 +15,7 @@ from types import TracebackType
 from typing import Self
 
 from mswap.core.errors import LockTimeout
+from mswap.util.fsx import ensure_private_dir
 
 
 class FileLock:
@@ -41,13 +42,13 @@ class FileLock:
 
     def acquire(self) -> None:
         """Acquire the file lock, blocking up to timeout seconds."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_private_dir(self.path.parent)
         start = time.monotonic()
 
         while True:
             if self._fd is None:
                 try:
-                    self._fd = os.open(str(self.path), os.O_RDWR | os.O_CREAT)
+                    self._fd = os.open(str(self.path), os.O_RDWR | os.O_CREAT, 0o600)
                 except OSError:
                     self._fd = None
 

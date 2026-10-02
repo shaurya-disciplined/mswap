@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from mswap.util.fsx import append_private_text, ensure_private_dir
 from mswap.util.redact import redact
 
 MAX_LOG_SIZE = 1024 * 1024  # 1 MB
@@ -24,7 +25,7 @@ class Events:
 
     def emit(self, event: str, **fields: Any) -> None:
         """Append one structured event line, rotating the log file if exceeding 1 MB."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_private_dir(self.path.parent)
 
         if self.path.exists() and self.path.stat().st_size >= MAX_LOG_SIZE:
             rotated_path = self.path.with_name(f"{self.path.name}.1")
@@ -42,8 +43,7 @@ class Events:
         line = json.dumps(record, ensure_ascii=False)
         line = redact(line)
 
-        with self.path.open("a", encoding="utf-8") as f:
-            f.write(line + "\n")
+        append_private_text(self.path, line + "\n")
 
     def read_recent(self, count: int = 20) -> list[dict[str, Any]]:
         """Read up to `count` recent events from this event log, newest last."""

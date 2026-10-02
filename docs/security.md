@@ -37,6 +37,22 @@
 
 ## Threat Model & Boundary Notes
 
+The full STRIDE analysis (assets, trust boundaries, mitigations with code and test references,
+and every accepted residual risk) is in [security/threat-model.md](security/threat-model.md).
+In short:
+
+- **No secret in a command line.** Logins reach `secret-tool` and `security` on stdin only, and
+  the test suite fails on any subprocess argument shaped like a token.
+- **Private by construction.** On macOS and Linux the data directory is `0700` and its files
+  `0600`, no matter which part of mswap creates them first.
+- **Launchers can't be hijacked.** The agy hook, the scheduled task and the shim run
+  `python -P -m mswap`, so a `mswap.py` sitting in the current directory (for example a freshly
+  cloned repository) is never imported. OS tools such as `schtasks` and `security` are taken
+  from the system directories, not the current directory.
+- **HTTPS only, no redirects.** Credentials are only ever sent to the fixed Google endpoints.
+- **Supply chain.** Every GitHub Action is pinned to a full commit SHA, and Dependabot keeps the
+  pins fresh.
+
 - **Workstation Security Boundary**: `mswap` runs with the permissions of the current logged-in user. Any process running under the same user account on Windows has access to the user's DPAPI-protected Credential Manager store.
 - **Direct Official Communication**: Network requests are made directly over HTTPS/TLS to Google's official endpoints:
   - OAuth token refresh: `https://oauth2.googleapis.com/token`

@@ -22,6 +22,8 @@ from typing import Any, TypedDict
 from uuid import uuid4
 
 from mswap.core.errors import UsageError
+from mswap.util.shellquote import RUN_MODULE, RUN_MODULE_ARGS
+from mswap.util.systools import run_system
 
 TASK_NAME = "mswap autopilot"
 MACOS_LABEL = "dev.mswap.autopilot"
@@ -44,12 +46,7 @@ Runner = Callable[[Sequence[str]], subprocess.CompletedProcess[str]]
 
 def _default_runner(cmd: Sequence[str]) -> subprocess.CompletedProcess[str]:
     """Run a subprocess, capturing stdout/stderr as text."""
-    return subprocess.run(  # noqa: S603 - static validated commands
-        list(cmd),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return run_system(list(cmd), capture_output=True, text=True, check=False)
 
 
 def _resolve_runner(runner: Runner | None) -> Runner:
@@ -136,8 +133,7 @@ def build_macos_plist(
         "Label": MACOS_LABEL,
         "ProgramArguments": [
             py_exe,
-            "-m",
-            "mswap",
+            *RUN_MODULE_ARGS,
             "auto",
             "--once",
             "--quiet",
@@ -273,10 +269,22 @@ def systemd_timer_path(home: Path | None = None) -> Path:
 
 
 def quote_systemd_arg(arg: str) -> str:
-    """Quote an argument for systemd unit file ExecStart if it contains spaces."""
-    if " " in arg or "\t" in arg:
-        return f'"{arg}"'
-    return arg
+    """Quote one argument for a systemd ``ExecStart=`` line.
+
+    systemd expands ``%`` specifiers and ``$`` variables itself, treats ``;`` as a separator and
+    reads C-style escapes inside double quotes, so all of those are escaped here. A newline
+    becomes ``\\n`` so an argument can never start a new line (and with it a new directive).
+    """
+    escaped = (
+        arg.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("%", "%%")
+        .replace("$", "$$")
+        .replace("\n", "\\n")
+        .replace("\r", "\\r")
+    )
+    plain = arg != "" and escaped == arg and not any(c.isspace() or c in "'\";" for c in arg)
+    return arg if plain else f'"{escaped}"'
 
 
 def build_systemd_service(*, python_bin: Path | str | None = None) -> str:
@@ -287,7 +295,7 @@ def build_systemd_service(*, python_bin: Path | str | None = None) -> str:
         "Description=mswap autopilot periodic check\n\n"
         "[Service]\n"
         "Type=oneshot\n"
-        f"ExecStart={py_exe} -m mswap auto --once --quiet\n"
+        f"ExecStart={py_exe} {RUN_MODULE} auto --once --quiet\n"
     )
 
 

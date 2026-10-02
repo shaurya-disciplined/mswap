@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import TypedDict
 
 from mswap.core.errors import UsageError
+from mswap.util.shellquote import RUN_MODULE, quote_windows
+from mswap.util.systools import run_system
 
 TASK_NAME = "mswap autopilot"
 
@@ -40,12 +42,7 @@ def _default_runner(
     cmd: Sequence[str],
 ) -> subprocess.CompletedProcess[str]:
     """Run a subprocess, capturing stdout/stderr as text."""
-    return subprocess.run(  # noqa: S603 - schtasks with validated static args
-        list(cmd),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return run_system(list(cmd), capture_output=True, text=True, check=False)
 
 
 def _resolve_runner(runner: Runner | None) -> Runner:
@@ -90,7 +87,7 @@ def build_install_argv(every: int) -> list[str]:
             hint="Choose an interval between 1 and 60 minutes.",
         )
     pythonw = _find_pythonw()
-    tr = f'"{pythonw}" -m mswap auto --once --quiet'
+    tr = f"{quote_windows(str(pythonw))} {RUN_MODULE} auto --once --quiet"
     return [
         "schtasks",
         "/Create",

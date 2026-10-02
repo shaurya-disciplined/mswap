@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from mswap.core.errors import NetworkError
-from mswap.util.http import FakeHttp, HttpResponse, UrllibHttp, json_response
+from mswap.util.http import _OPENER, FakeHttp, HttpResponse, UrllibHttp, json_response
 
 
 def test_fake_http_queues_in_order_and_repeats_last() -> None:
@@ -116,7 +116,7 @@ def test_urllib_http_success_and_json_body(monkeypatch: pytest.MonkeyPatch) -> N
         captured_req.append(req)
         return DummyResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+    monkeypatch.setattr(_OPENER, "open", dummy_urlopen)
 
     resp = client.request("POST", "https://api.example.com/item", json_body={"hello": "world"})
     assert resp.status == 200
@@ -152,7 +152,7 @@ def test_urllib_http_form_body(monkeypatch: pytest.MonkeyPatch) -> None:
         captured_req.append(req)
         return DummyResponse()
 
-    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+    monkeypatch.setattr(_OPENER, "open", dummy_urlopen)
 
     resp = client.request("POST", "https://api.example.com/form", form={"field": "val"})
     assert resp.status == 200
@@ -180,7 +180,7 @@ def test_urllib_http_catches_http_error(monkeypatch: pytest.MonkeyPatch) -> None
             fp,  # type: ignore[arg-type]
         )
 
-    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+    monkeypatch.setattr(_OPENER, "open", dummy_urlopen)
 
     resp = client.request("GET", "https://api.example.com/bad")
     assert resp.status == 400
@@ -199,7 +199,7 @@ def test_urllib_http_raises_network_error_on_url_error(monkeypatch: pytest.Monke
     def dummy_urlopen(req: urllib.request.Request, timeout: float = 20.0) -> Any:
         raise urllib.error.URLError("connection refused")
 
-    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+    monkeypatch.setattr(_OPENER, "open", dummy_urlopen)
 
     with pytest.raises(NetworkError, match=r"network error: connection refused"):
         client.request("GET", "https://api.example.com/fail")
@@ -215,7 +215,65 @@ def test_urllib_http_raises_network_error_on_timeout(monkeypatch: pytest.MonkeyP
     def dummy_urlopen(req: urllib.request.Request, timeout: float = 20.0) -> Any:
         raise TimeoutError("timed out")
 
-    monkeypatch.setattr(urllib.request, "urlopen", dummy_urlopen)
+    monkeypatch.setattr(_OPENER, "open", dummy_urlopen)
 
     with pytest.raises(NetworkError, match=r"network error: timed out"):
         client.request("GET", "https://api.example.com/timeout")
+
+
+def test_urllib_http_refuses_plain_http_and_other_schemes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("MSWAP_NO_NETWORK")
+    client = UrllibHttp()
+    for url in ("http://oauth2.example.com/token", "file:///etc/passwd", "ftp://example.com/x"):
+        with pytest.raises(NetworkError, match="https only"):
+            client.request("POST", url, form={"refresh_token": "x"})
+
+
+def test_redirects_are_never_followed_so_credentials_stay_on_the_first_host() -> None:
+    import http.server
+    import threading
+    import urllib.error
+    import urllib.request
+
+    hits: dict[str, list[str]] = {"target": [], "origin": []}
+
+    class Target(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            hits["target"].append(self.headers.get("Authorization", ""))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *_args: object) -> None:
+            pass
+
+    target = http.server.HTTPServer(("127.0.0.1", 0), Target)
+    target_url = f"http://127.0.0.1:{target.server_address[1]}/stolen"
+
+    class Origin(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            hits["origin"].append(self.headers.get("Authorization", ""))
+            self.send_response(302)
+            self.send_header("Location", target_url)
+            self.end_headers()
+
+        def log_message(self, *_args: object) -> None:
+            pass
+
+    origin = http.server.HTTPServer(("127.0.0.1", 0), Origin)
+    threads = [threading.Thread(target=srv.serve_forever, daemon=True) for srv in (origin, target)]
+    for thread in threads:
+        thread.start()
+    try:
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{origin.server_address[1]}/start",
+            headers={"Authorization": "Bearer ya29.FAKE"},
+        )
+        with pytest.raises(urllib.error.HTTPError) as info:
+            _OPENER.open(req, timeout=5)
+        assert info.value.code == 302
+    finally:
+        for srv in (origin, target):
+            srv.shutdown()
+            srv.server_close()
+    assert hits["origin"] == ["Bearer ya29.FAKE"]
+    assert hits["target"] == []

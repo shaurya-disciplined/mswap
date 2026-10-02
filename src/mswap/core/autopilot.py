@@ -64,6 +64,7 @@ from mswap.core.policy import (
 from mswap.core.settings import Settings
 from mswap.core.store import data_dir, live_target
 from mswap.core.usage import refresh_usage
+from mswap.util.fsx import write_private_text
 
 
 @dataclass(frozen=True)
@@ -140,8 +141,6 @@ class AutopilotStateStore:
 
     def save(self, state: AutopilotState | State) -> None:
         """Atomically persist autopilot state to autopilot.json."""
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-
         wb_at = getattr(state, "writeback_suspected_at", None)
         last_dec = getattr(state, "last_decision", None)
 
@@ -154,9 +153,7 @@ class AutopilotStateStore:
             "last_decision": last_dec,
         }
 
-        tmp_path = self.path.with_name(f"{self.path.name}.tmp")
-        tmp_path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-        tmp_path.replace(self.path)
+        write_private_text(self.path, json.dumps(data, indent=2))
 
 
 def record_switch_state(

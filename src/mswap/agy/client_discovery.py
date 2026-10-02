@@ -12,6 +12,7 @@ from typing import Any
 from mswap.agy.install import agy_version
 from mswap.agy.paths import agy_exe, data_dir
 from mswap.core.errors import AgyNotFound, CorruptState
+from mswap.util.fsx import write_private_text
 from mswap.util.http import Http, UrllibHttp
 
 CLIENT_ID_RE = rb"\d{6,}-[a-z0-9]{32}\.apps\.googleusercontent\.com"
@@ -55,10 +56,7 @@ def _load_json(path: Path) -> dict[str, Any]:
 
 
 def _save_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
-    tmp.replace(path)
+    write_private_text(path, json.dumps(data, indent=2))
 
 
 def save_client_secret(secret: str) -> None:

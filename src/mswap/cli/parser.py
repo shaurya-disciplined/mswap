@@ -228,6 +228,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="run network checks for token refresh and quota API",
     )
 
+    # status
+    p_status = subparsers.add_parser(
+        "status",
+        parents=[parent],
+        help="cache-only one-liner for shell prompts",
+    )
+    p_status.add_argument(
+        "--format",
+        default=None,
+        help="format string for prompt output",
+    )
+
+    # watch
+    p_watch = subparsers.add_parser(
+        "watch",
+        parents=[parent],
+        help="live dashboard with keyboard controls",
+    )
+    p_watch.add_argument(
+        "--force",
+        action="store_true",
+        default=False,
+        help="allow switching accounts even if inside agy",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

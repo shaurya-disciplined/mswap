@@ -9,8 +9,10 @@ import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TextIO
+from typing import TYPE_CHECKING, Any, TextIO
 
+if TYPE_CHECKING:
+    from mswap.util.http import Http
 from mswap.agy.process import (
     AgyProcess,
     running_agy,
@@ -24,9 +26,40 @@ from mswap.core.locking import FileLock
 from mswap.core.store import AccountStore, data_dir
 from mswap.ui.theme import Theme, theme_from
 from mswap.util.clock import Clock, SystemClock
-from mswap.util.http import Http, UrllibHttp
 from mswap.vault import get_vault
 from mswap.vault.base import Vault
+
+
+class _LazyHttp:
+    """Lazy HTTP client wrapper to avoid importing urllib/http until network access."""
+
+    __slots__ = ("_instance",)
+
+    def __init__(self, instance: Any = None) -> None:
+        self._instance = instance
+
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        json_body: Any = None,
+        form: dict[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        timeout: float = 20.0,
+    ) -> Any:
+        if self._instance is None:
+            from mswap.util.http import UrllibHttp
+
+            self._instance = UrllibHttp()
+        return self._instance.request(
+            method,
+            url,
+            json_body=json_body,
+            form=form,
+            headers=headers,
+            timeout=timeout,
+        )
 
 
 def _default_lock(timeout: float = 10.0, poll: float = 0.05) -> FileLock:
@@ -89,7 +122,7 @@ def default_context(args: argparse.Namespace | None = None) -> AppContext:
     home = data_dir()
     return AppContext(
         vault=get_vault(),
-        http=UrllibHttp(),
+        http=_LazyHttp(),
         clock=SystemClock(),
         store=AccountStore(home),
         env=env,

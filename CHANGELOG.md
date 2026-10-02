@@ -4,8 +4,13 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-02
+
 ### Added
 
+- Zero-dependency live dashboard (`mswap watch`) with alternate screen buffer, 1s tick, 15s refresh, and non-blocking keyboard controls (q, r, s, 1-9) (W3.S5).
+- Cache-only status one-liner (`mswap status [--format FMT] [--json]`) with < 150 ms execution overhead and zero network imports for shell prompt integration (W3.S5).
+- Shell prompt integration documentation (`docs/prompt-integration.md`) with PowerShell, Starship, Bash, and Zsh snippets (W3.S5).
 - Weekly pace marker and JSON forecasts (W3.S4).
 - Usage cache with adaptive polling and rate-limit backoff; list --refresh (W3.S2).
 

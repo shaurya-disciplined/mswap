@@ -27,7 +27,14 @@ def check_markdown_file(md_file: Path) -> list[str]:
         return [f"Could not read {md_file}: {e}"]
 
     lines = content.splitlines()
+    in_code_block = False
     for line_num, line in enumerate(lines, start=1):
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+        if in_code_block:
+            continue
+
         targets: list[str] = []
 
         # Find markdown links

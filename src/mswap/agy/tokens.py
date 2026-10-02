@@ -13,13 +13,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Protocol, TypeVar
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar
 
-from mswap.agy.client_discovery import OAuthClient, discover, rediscover
+if TYPE_CHECKING:
+    from mswap.agy.client_discovery import OAuthClient
+    from mswap.util.http import Http
 from mswap.agy.paths import agy_exe
 from mswap.core.errors import ApiError, CorruptState, MswapError, TokenDead, TokenExpired
 from mswap.core.models import Account, Quarantine
-from mswap.util.http import Http
 
 T = TypeVar("T")
 
@@ -199,7 +200,7 @@ def ensure_fresh(
 
 def refresh(refresh_token: str, http: Http) -> dict[str, Any]:
     """Refresh an access token using discovered agy OAuth client details."""
-    from mswap.agy.client_discovery import _config_file
+    from mswap.agy.client_discovery import _config_file, discover
 
     cfg_file = _config_file()
     client = discover(agy_exe(), cfg_file, http, sample_refresh_token=refresh_token)
@@ -244,11 +245,15 @@ class TokenService:
         return cf
 
     def _get_client(self, sample_refresh_token: str | None = None) -> OAuthClient:
+        from mswap.agy.client_discovery import discover
+
         exe = agy_exe()
         cache_file = self._client_cache_file()
         return discover(exe, cache_file, self.ctx.http, sample_refresh_token)
 
     def _rediscover_client(self, sample_refresh_token: str | None = None) -> OAuthClient:
+        from mswap.agy.client_discovery import rediscover
+
         exe = agy_exe()
         cache_file = self._client_cache_file()
         return rediscover(exe, cache_file, self.ctx.http, sample_refresh_token)

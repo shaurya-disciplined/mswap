@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- Usage cache with adaptive polling and rate-limit backoff; list --refresh (W3.S2).
+
 ### Changed
 
 - Sturdier quota parsing with automatic fallback (W3.S1).

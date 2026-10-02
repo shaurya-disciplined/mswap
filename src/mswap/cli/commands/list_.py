@@ -3,25 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import contextlib
-import json
-import os
-from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from mswap.agy.api import AgyApi
-from mswap.agy.install import agy_version, os_arch, user_agent
-from mswap.agy.paths import agy_exe
-from mswap.agy.tokens import TokenService
 from mswap.cli.context import AppContext
-from mswap.core.errors import MswapError, TokenDead
-from mswap.core.models import Account, QuotaSnapshot
-from mswap.core.store import find_active, live_target, slot_target
+from mswap.core.models import Account
+from mswap.core.poll_policy import ttl
+from mswap.core.store import find_active, live_target
+from mswap.core.usage import refresh_usage
 from mswap.ui import jsonout
-from mswap.ui.render import print_quota
+from mswap.ui.render import format_age, print_quota
 
 
-def run(ctx: AppContext, _args: argparse.Namespace) -> int:
+def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the list command."""
     accounts = ctx.store.load()
     live = ctx.vault.read(live_target())
@@ -35,73 +28,32 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
         print("No accounts saved yet. Sign in to agy, then run `mswap add`.", file=ctx.out)
         return 0
 
-    cache_file = ctx.store.root / "client.json"
-    if not cache_file.exists():
-        legacy_cfg = ctx.store.root / "config.json"
-        if legacy_cfg.exists():
-            cache_file = legacy_cfg
-    cache: dict[str, Any] = {}
-    if cache_file.exists():
-        try:
-            cache = json.loads(cache_file.read_text(encoding="utf-8"))
-        except Exception:
-            cache = {}
-    version = agy_version(agy_exe(), cache)
-    ua = user_agent(version, os_arch())
-    api = AgyApi(ctx.http, ua, clock=ctx.clock)
-    token_service = TokenService(ctx)
+    force = getattr(args, "refresh", False)
+    results = refresh_usage(ctx, accounts, force=force)
 
-    def fetch(
-        acc: Account,
-    ) -> tuple[Account, QuotaSnapshot | None, str | None]:
-        is_active = active is not None and acc.slot == active.slot
-        if acc.quarantined is not None:
-            return (
-                acc,
-                None,
-                "saved login expired or revoked  → sign in as it in agy, then `mswap add`",
-            )
-        if os.environ.get("MSWAP_DEMO") == "1":
-            usage_file = ctx.store.root / "usage.json"
-            if usage_file.exists():
-                with contextlib.suppress(Exception):
-                    usage_json = json.loads(usage_file.read_text(encoding="utf-8"))
-                    acc_entry = usage_json.get("accounts", {}).get(acc.fp)
-                    if acc_entry and "groups" in acc_entry:
-                        snap = AgyApi._parse_summary(
-                            {"groups": acc_entry["groups"]},
-                            ctx.clock.now(),
-                        )
-                        return acc, snap, None
-        blob = live if is_active else ctx.vault.read(slot_target(acc.slot))
-        if not blob:
-            return acc, None, "saved login missing (run `mswap add` while signed in as it)"
-        try:
-            target = blob if is_active else acc
-            snapshot = token_service.call_with_retry(target, api.quota_summary)
-            return acc, snapshot, None
-        except TokenDead:
-            return (
-                acc,
-                None,
-                "saved login expired or revoked  → sign in as it in agy, then `mswap add`",
-            )
-        except MswapError as e:
-            return acc, None, str(e)
-
-    with ThreadPoolExecutor(max_workers=min(8, len(accounts))) as pool:
-        results = list(pool.map(fetch, accounts))
+    now = ctx.clock.now()
 
     if ctx.json:
-        now_iso = ctx.clock.now().isoformat()
         accounts_data: list[dict[str, Any]] = []
-        for acc, snapshot, err in results:
+        for acc in accounts:
+            entry = results.get(acc.slot)
             is_active = active is not None and acc.slot == active.slot
-            pools_json = (
-                [p.to_json() for p in snapshot.pools]
-                if (snapshot is not None and err is None)
-                else []
-            )
+            snap = entry.snapshot if entry else None
+
+            if entry is not None:
+                ttl_val = ttl(snap, active=is_active)
+                elapsed = (now - entry.fetched_at).total_seconds()
+                is_stale_flag = elapsed > ttl_val
+            else:
+                is_stale_flag = True
+
+            err_msg: str | None = None
+            if entry and entry.error:
+                err_msg = entry.error.get("message")
+
+            pools_json = [p.to_json() for p in snap.pools] if snap is not None else []
+            fetched_at_str = entry.fetched_at.isoformat() if entry else now.isoformat()
+
             accounts_data.append(
                 {
                     "slot": acc.slot,
@@ -119,11 +71,9 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
                     ),
                     "plan": acc.plan,
                     "usage": {
-                        "fetched_at": (
-                            snapshot.fetched_at.isoformat() if snapshot is not None else now_iso
-                        ),
-                        "stale": False,
-                        "error": err,
+                        "fetched_at": fetched_at_str,
+                        "stale": is_stale_flag,
+                        "error": err_msg,
                         "pools": pools_json,
                     },
                 }
@@ -137,21 +87,42 @@ def run(ctx: AppContext, _args: argparse.Namespace) -> int:
 
     header = ctx.theme.bold("mswap") + ctx.theme.dim(" · agy accounts")
     print(header, file=ctx.out)
-    for acc, snapshot, err in results:
+    for acc in accounts:
         is_active = active is not None and acc.slot == active.slot
+        entry = results.get(acc.slot)
+        snap = entry.snapshot if entry else None
+        err = entry.error if entry else None
+        err_msg = err.get("message") if err else None
+
         mark = ctx.theme.accent(ctx.theme.glyph_active) if is_active else " "
         tag = ctx.theme.ok(" (active)") if is_active else ""
         alias_str = f"  · alias {acc.alias}" if acc.alias else ""
         disabled_str = "  · disabled" if acc.disabled else ""
         slot_str = ctx.theme.bold(str(acc.slot))
-        print(f"\n {mark} {slot_str}  {acc.email}{tag}{alias_str}{disabled_str}", file=ctx.out)
-        if err:
-            print(f"     {ctx.theme.err('n/a')}  {ctx.theme.dim(err)}", file=ctx.out)
-        elif snapshot is not None:
-            if snapshot.source == "models":
+
+        age_suffix = ""
+        if snap is not None and entry is not None:
+            ttl_val = ttl(snap, active=is_active)
+            elapsed = (now - entry.fetched_at).total_seconds()
+            in_backoff = entry.backoff_until is not None and now < entry.backoff_until
+            if elapsed > ttl_val or in_backoff:
+                age_suffix = ctx.theme.dim(f" · {format_age(int(elapsed))} ago")
+
+        print(
+            f"\n {mark} {slot_str}  {acc.email}{tag}{alias_str}{disabled_str}{age_suffix}",
+            file=ctx.out,
+        )
+
+        if snap is not None:
+            if snap.source == "models":
                 print(ctx.theme.dim("  (per-model view: summary unavailable)"), file=ctx.out)
-            for line in print_quota(snapshot, ctx.clock.now()):
+            for line in print_quota(snap, now):
                 print(line, file=ctx.out)
+            if err_msg:
+                print(f"     {ctx.theme.dim(f'last check failed: {err_msg}')}", file=ctx.out)
+        elif err_msg:
+            print(f"     {ctx.theme.err('n/a')}  {ctx.theme.dim(err_msg)}", file=ctx.out)
+
     if live and not active:
         msg = (
             "\n  agy is signed in to an account mswap doesn't know yet. Run `mswap add` to save it."

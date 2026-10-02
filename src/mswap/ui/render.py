@@ -39,6 +39,18 @@ def reset_text(iso: str | datetime | None, now: datetime, *, tz: tzinfo | None =
     return f"resets {when} ({span})"
 
 
+def format_age(seconds: int) -> str:
+    """Format elapsed seconds as a compact age string ('45s', '6m', '2h', '3d')."""
+    s = max(0, seconds)
+    if s < 60:
+        return f"{s}s"
+    if s < 3600:
+        return f"{s // 60}m"
+    if s < 86400:
+        return f"{s // 3600}h"
+    return f"{s // 86400}d"
+
+
 def print_quota(
     quota: QuotaSnapshot | Sequence[Pool] | list[dict[str, Any]],
     now: datetime,

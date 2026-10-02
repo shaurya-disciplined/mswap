@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import base64
-import sys
 from typing import Any
 
 import pytest
 
 from mswap.core.errors import VaultError
-from mswap.vault import get_vault, reset_linux_warned, reset_memory_vault
 from mswap.vault.linux import SecretToolVault, _parse_search_output
 
 
@@ -413,43 +411,6 @@ def test_dbus_autolaunch_error_mapped_to_vault_error() -> None:
     with pytest.raises(VaultError, match="No Secret Service available") as exc:
         vault.read("mswap:slot1")
     assert "MSWAP_VAULT=file" in exc.value.hint
-
-
-def test_get_vault_linux_experimental_notice(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setenv("MSWAP_VAULT", "native")
-    monkeypatch.delenv("MSWAP_ACK_EXPERIMENTAL", raising=False)
-    monkeypatch.delenv("MSWAP_DEMO", raising=False)
-    reset_linux_warned()
-    reset_memory_vault()
-
-    v = get_vault()
-    assert isinstance(v, SecretToolVault)
-    captured = capsys.readouterr()
-    assert "Linux support is experimental. See docs/platforms.md." in captured.err
-
-    # Second call in same process should NOT print notice again
-    _ = get_vault()
-    captured2 = capsys.readouterr()
-    assert captured2.err == ""
-
-
-def test_get_vault_linux_acknowledged(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    monkeypatch.setattr(sys, "platform", "linux")
-    monkeypatch.setenv("MSWAP_VAULT", "native")
-    monkeypatch.setenv("MSWAP_ACK_EXPERIMENTAL", "1")
-    monkeypatch.delenv("MSWAP_DEMO", raising=False)
-    reset_linux_warned()
-    reset_memory_vault()
-
-    v = get_vault()
-    assert isinstance(v, SecretToolVault)
-    captured = capsys.readouterr()
-    assert captured.err == ""
 
 
 def test_list_includes_live_target(monkeypatch: pytest.MonkeyPatch) -> None:

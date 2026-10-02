@@ -73,32 +73,16 @@ def get_vault() -> Vault:
 
             return WindowsVault()
         if sys.platform == "darwin":
-            global _MACOS_WARNED
-            if not _MACOS_WARNED:
-                _MACOS_WARNED = True
-                if os.environ.get("MSWAP_ACK_EXPERIMENTAL") != "1":
-                    print(
-                        _dim("macOS support is experimental. See docs/platforms.md."),
-                        file=sys.stderr,
-                    )
             from mswap.vault.macos import MacKeychainVault
 
             return MacKeychainVault()
         if sys.platform.startswith("linux"):
-            global _LINUX_WARNED
-            if not _LINUX_WARNED:
-                _LINUX_WARNED = True
-                if os.environ.get("MSWAP_ACK_EXPERIMENTAL") != "1":
-                    print(
-                        _dim("Linux support is experimental. See docs/platforms.md."),
-                        file=sys.stderr,
-                    )
             from mswap.vault.linux import SecretToolVault
 
             return SecretToolVault()
         raise VaultError(
             "No supported credential store on this OS yet.",
-            hint="macOS and Linux support arrives in v0.6.",
+            hint="Only macOS, Windows, and Linux are supported.",
         )
     raise VaultError(f"Unknown vault backend: {backend}")
 
@@ -107,18 +91,6 @@ def reset_memory_vault() -> None:
     """Reset the memory vault singleton (used in test isolation)."""
     global _MEMORY_VAULT_SINGLETON
     _MEMORY_VAULT_SINGLETON = None
-
-
-def reset_macos_warned() -> None:
-    """Reset the macOS experimental warning flag (used in test isolation)."""
-    global _MACOS_WARNED
-    _MACOS_WARNED = False
-
-
-def reset_linux_warned() -> None:
-    """Reset the Linux experimental warning flag (used in test isolation)."""
-    global _LINUX_WARNED
-    _LINUX_WARNED = False
 
 
 def reset_file_vault_warned() -> None:

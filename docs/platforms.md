@@ -7,9 +7,9 @@ mswap is built to run cross-platform across Windows, macOS, and Linux with nativ
 | Platform | Credential Backend | Status | Notes | Introduced |
 |---|---|---|---|---|
 | **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs | v0.1.0 |
-| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive | v0.6.0 (W5.S2) |
-| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive | v0.6.0 (W5.S3) |
-| **Linux (Headless)** | File Vault fallback (`FileVault` / `CompositeVault`) | **Experimental (Opt-in)** | Unencrypted file storage for headless/WSL environments | v0.6.0 (W5.S3) |
+| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | **Experimental** | CI-tested backend; real-world storage unverified | v0.6.0 |
+| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | **Experimental** | CI-tested backend; real-world storage unverified | v0.6.0 |
+| **Linux (Headless)** | File Vault fallback (`FileVault` / `CompositeVault`) | **Experimental (Opt-in)** | Unencrypted file storage for headless/WSL environments | v0.6.0 |
 
 ---
 
@@ -74,7 +74,7 @@ To help verify where and how agy stores its login on macOS, run the safe, read-o
 bash scripts/spikes/posix_probe.sh
 ```
 
-This script collects keychain attribute names, encoding prefix classes, and lengths only—it **never captures or prints secrets or token values**, and it aborts immediately if any secret pattern is detected. Share the output in the GitHub discussion to help graduate macOS support from experimental to fully supported!
+This script collects keychain attribute names, encoding prefix classes, and lengths only—it **never captures or prints secrets or token values**, and it aborts immediately if any secret pattern is detected. Share the output in the GitHub discussion if you encounter issues.
 
 ---
 

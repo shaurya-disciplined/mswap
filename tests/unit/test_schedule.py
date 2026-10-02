@@ -382,6 +382,11 @@ class TestQuery:
 class TestScheduleCLI:
     """Integration tests for ``mswap schedule`` via ``main()``."""
 
+    @pytest.fixture(autouse=True)
+    def _mock_windows_platform(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Default to Windows platform for CLI tests, except where overridden."""
+        monkeypatch.setattr(sys, "platform", "win32")
+
     def test_non_windows_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Schedule on non-Windows raises UsageError."""
         from mswap.cli.commands import schedule as sched_mod
@@ -389,6 +394,14 @@ class TestScheduleCLI:
         monkeypatch.setattr(sys, "platform", "linux")
         with pytest.raises(UsageError, match=r"Windows-only"):
             sched_mod._check_platform()
+
+    def test_main_on_non_windows_returns_usage_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """main(['schedule', 'status']) returns exit code 64 on non-Windows."""
+        from mswap.cli import main
+
+        monkeypatch.setattr(sys, "platform", "linux")
+        code = main(["schedule", "status"])
+        assert code == 64
 
     def test_missing_action_raises(self, ctx: Any) -> None:
         """Schedule with no action raises UsageError."""
@@ -482,13 +495,20 @@ class TestScheduleCLI:
         code = main(["schedule", "status"])
         assert code == 0
 
-    def test_status_with_events(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    def test_status_with_events(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
         """``mswap schedule status`` includes recent autopilot events."""
         from mswap.cli import main
 
         # Write some events
         events_dir = tmp_path / "home"
         events_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("MSWAP_HOME", str(events_dir))
+
         events_file = events_dir / "events.log"
         events = [
             {
@@ -499,7 +519,7 @@ class TestScheduleCLI:
             {
                 "event": "switch",
                 "at": "2026-10-02T12:05:00Z",
-                "reason": "90% used; switching",
+                "reason": "90% used; switching to the account with the most left",
             },
             {
                 "event": "hold",
@@ -509,11 +529,48 @@ class TestScheduleCLI:
             {
                 "event": "hold",
                 "at": "2026-10-02T12:15:00Z",
-                "reason": "still cooling down",
+                "reason": "still cooling down and waiting for timer to expire",
             },
         ]
+        # Include blank line and malformed json line to test resilient parsing
+        content = "\n".join(json.dumps(e) for e in events) + "\n\n{invalid json}\n"
+        events_file.write_text(content, encoding="utf-8")
+
+        def fake_runner(
+            cmd: Any,
+        ) -> subprocess.CompletedProcess[str]:
+            return subprocess.CompletedProcess(
+                args=list(cmd),
+                returncode=0,
+                stdout=SCHTASKS_QUERY_SAMPLE,
+                stderr="",
+            )
+
+        monkeypatch.setattr("mswap.util.schedule_win._default_runner", fake_runner)
+
+        code = main(["schedule", "status"])
+        assert code == 0
+        out = capsys.readouterr().out
+        assert "Recent autopilot events:" in out
+        assert "switch" in out
+        assert "90% used; switching" in out
+
+    def test_status_with_no_relevant_events(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """``mswap schedule status`` when events.log has no autopilot events."""
+        from mswap.cli import main
+
+        events_dir = tmp_path / "home"
+        events_dir.mkdir(parents=True, exist_ok=True)
+        monkeypatch.setenv("MSWAP_HOME", str(events_dir))
+
+        events_file = events_dir / "events.log"
         events_file.write_text(
-            "\n".join(json.dumps(e) for e in events) + "\n",
+            json.dumps({"event": "other_unrelated_event", "at": "2026-10-02T12:00:00Z"}) + "\n",
             encoding="utf-8",
         )
 
@@ -531,6 +588,8 @@ class TestScheduleCLI:
 
         code = main(["schedule", "status"])
         assert code == 0
+        out = capsys.readouterr().out
+        assert "Recent autopilot events:" not in out
 
 
 class TestVerifyNoRealTask:

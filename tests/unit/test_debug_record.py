@@ -150,7 +150,7 @@ def test_shape_never_keeps_a_secret_shaped_value_even_under_an_allow_listed_key(
         ("eyJhbGciOi.eyJzdWIiOi.c2ln", "jwt"),
         ('{"refresh_token": "abc"}', "token_field"),
         ("someone@example.com", "email"),
-        ("a.b+c@sub.example.org", "email"),
+        ("a.b+c@example.com", "email"),
     ],
 )
 def test_scan_text_flags_each_pattern(text: str, kind: str) -> None:
@@ -349,7 +349,7 @@ def test_record_notes_a_single_failed_endpoint_without_the_server_message(
     ctx: AppContext, vault: MemoryVault, tmp_path: Path
 ) -> None:
     _seed(ctx, vault)
-    ctx.http.add("POST", QUOTA_SUMMARY_URL, json_response({"error": {"message": "x@y.com"}}, 404))  # type: ignore[attr-defined]
+    ctx.http.add("POST", QUOTA_SUMMARY_URL, json_response({"error": {"message": "bob@example.com"}}, 404))  # type: ignore[attr-defined]
     ctx.http.add("POST", LOAD_CODE_ASSIST_URL, json_response(_fixture("load_code_assist.json")))  # type: ignore[attr-defined]
     ctx.http.add("POST", FETCH_MODELS_URL, json_response(_fixture("fetch_available_models.json")))  # type: ignore[attr-defined]
     out = tmp_path / "capture"

@@ -5,6 +5,8 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 ## [Unreleased]
 
 ### Added
+
+- Added: experimental Linux Secret Service support; opt-in file vault (W5.S3).
 - mswap auto with dry-run, JSON events and write-back detection (W4.S2).
 - Added: experimental macOS Keychain support (W5.S2).
 - Pool-aware autopilot policy engine (W4.S1).

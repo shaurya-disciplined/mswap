@@ -143,7 +143,7 @@ def test_get_vault_native_windows(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_get_vault_native_non_windows(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setattr(sys, "platform", "freebsd")
     monkeypatch.setenv("MSWAP_VAULT", "native")
     with pytest.raises(VaultError) as exc_info:
         get_vault()

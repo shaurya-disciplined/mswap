@@ -6,12 +6,14 @@ import os
 import sys
 from pathlib import Path
 
-from mswap.core.errors import VaultError
+from mswap.core.errors import UsageError, VaultError
 from mswap.vault.base import Vault
 from mswap.vault.memory import MemoryVault
 
 _MEMORY_VAULT_SINGLETON: MemoryVault | None = None
 _MACOS_WARNED: bool = False
+_LINUX_WARNED: bool = False
+_FILE_VAULT_WARNED: bool = False
 
 
 def _demo_vault_path() -> Path:
@@ -43,7 +45,29 @@ def get_vault() -> Vault:
         if _MEMORY_VAULT_SINGLETON is None:
             _MEMORY_VAULT_SINGLETON = MemoryVault()
         return _MEMORY_VAULT_SINGLETON
-    if backend in ("native", "windows", "macos"):
+
+    if backend == "file":
+        if sys.platform == "win32":
+            raise UsageError(
+                "File vault is not supported on Windows.",
+                hint="Windows uses Windows Credential Manager.",
+            )
+        from mswap.vault.file import CompositeVault, FileVault, _default_file_vault_root
+        from mswap.vault.linux import SecretToolVault
+
+        root = _default_file_vault_root()
+        global _FILE_VAULT_WARNED
+        if not _FILE_VAULT_WARNED:
+            _FILE_VAULT_WARNED = True
+            print(
+                f"! Using the file vault: logins are stored unencrypted in {root}. "
+                "Prefer a Secret Service.",
+                file=sys.stderr,
+            )
+
+        return CompositeVault(live=SecretToolVault(), own=FileVault(root=root))
+
+    if backend in ("native", "windows", "macos", "linux"):
         if sys.platform == "win32":
             from mswap.vault.windows import WindowsVault
 
@@ -60,6 +84,18 @@ def get_vault() -> Vault:
             from mswap.vault.macos import MacKeychainVault
 
             return MacKeychainVault()
+        if sys.platform.startswith("linux"):
+            global _LINUX_WARNED
+            if not _LINUX_WARNED:
+                _LINUX_WARNED = True
+                if os.environ.get("MSWAP_ACK_EXPERIMENTAL") != "1":
+                    print(
+                        _dim("Linux support is experimental. See docs/platforms.md."),
+                        file=sys.stderr,
+                    )
+            from mswap.vault.linux import SecretToolVault
+
+            return SecretToolVault()
         raise VaultError(
             "No supported credential store on this OS yet.",
             hint="macOS and Linux support arrives in v0.6.",
@@ -77,3 +113,15 @@ def reset_macos_warned() -> None:
     """Reset the macOS experimental warning flag (used in test isolation)."""
     global _MACOS_WARNED
     _MACOS_WARNED = False
+
+
+def reset_linux_warned() -> None:
+    """Reset the Linux experimental warning flag (used in test isolation)."""
+    global _LINUX_WARNED
+    _LINUX_WARNED = False
+
+
+def reset_file_vault_warned() -> None:
+    """Reset the file vault warning flag (used in test isolation)."""
+    global _FILE_VAULT_WARNED
+    _FILE_VAULT_WARNED = False

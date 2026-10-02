@@ -166,7 +166,27 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
         parsed = parser.parse_args(args_list)
 
         if getattr(parsed, "version", False):
-            print(f"mswap {__version__} · not affiliated with Google")
+            try:
+                import json
+
+                from mswap.agy.install import agy_version
+                from mswap.agy.paths import agy_exe, data_dir
+
+                cache = {}
+                client_path = data_dir() / "client.json"
+                if client_path.exists():
+                    try:
+                        with open(client_path, encoding="utf-8") as f:
+                            cache = json.load(f)
+                    except Exception:
+                        pass
+
+                av = agy_version(agy_exe(), cache)
+                agy_part = f" (agy {av})" if av and av != "0.0.0" else " (agy not found)"
+            except Exception:
+                agy_part = " (agy not found)"
+
+            print(f"mswap {__version__}{agy_part} · not affiliated with Google")
             return 0
 
         app_ctx = ctx or get_context(parsed)

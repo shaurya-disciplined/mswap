@@ -31,8 +31,8 @@ def _make_snapshot(remaining_values: list[float], now: datetime | None = None) -
 
 def test_ttl_none() -> None:
     # Arrange & Act & Assert
-    assert ttl(None, active=False) == 0
-    assert ttl(None, active=True) == 0
+    assert ttl(None, active=False, near_limit=False) == 0
+    assert ttl(None, active=True, near_limit=False) == 0
 
 
 def test_ttl_exhausted_vs_active_precedence() -> None:
@@ -40,8 +40,8 @@ def test_ttl_exhausted_vs_active_precedence() -> None:
     snap = _make_snapshot([0.0, 0.0])
 
     # Act & Assert: Exhausted wins over active
-    assert ttl(snap, active=True) == EXHAUSTED_TTL
-    assert ttl(snap, active=False) == EXHAUSTED_TTL
+    assert ttl(snap, active=True, near_limit=False) == EXHAUSTED_TTL
+    assert ttl(snap, active=False, near_limit=False) == EXHAUSTED_TTL
     assert EXHAUSTED_TTL == 600
 
 
@@ -50,24 +50,24 @@ def test_ttl_active_account() -> None:
     snap = _make_snapshot([0.8, 0.9])
 
     # Act & Assert
-    assert ttl(snap, active=True) == ACTIVE_TTL
+    assert ttl(snap, active=True, near_limit=False) == ACTIVE_TTL
     assert ACTIVE_TTL == 60
 
     # Active wins over near-limit bucket
     snap_low = _make_snapshot([0.15, 0.9])
-    assert ttl(snap_low, active=True) == ACTIVE_TTL
+    assert ttl(snap_low, active=True, near_limit=False) == ACTIVE_TTL
 
 
 def test_ttl_near_limit_boundary() -> None:
     # Arrange
-    # Boundary exactly at NEAR_LIMIT (0.20) -> not near limit, so idle
+    # Not near limit
     snap_exact = _make_snapshot([0.20, 0.9])
-    assert ttl(snap_exact, active=False) == IDLE_TTL
+    assert ttl(snap_exact, active=False, near_limit=False) == IDLE_TTL
     assert IDLE_TTL == 300
 
-    # Just below NEAR_LIMIT (0.199) -> near limit
+    # Near limit
     snap_near = _make_snapshot([0.199, 0.9])
-    assert ttl(snap_near, active=False) == NEAR_LIMIT_TTL
+    assert ttl(snap_near, active=False, near_limit=True) == NEAR_LIMIT_TTL
     assert NEAR_LIMIT_TTL == 90
 
 
@@ -76,26 +76,26 @@ def test_ttl_idle_healthy() -> None:
     snap = _make_snapshot([0.5, 0.8])
 
     # Act & Assert
-    assert ttl(snap, active=False) == IDLE_TTL
+    assert ttl(snap, active=False, near_limit=False) == IDLE_TTL
 
 
 def test_ttl_empty_pools_or_buckets() -> None:
     now = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
     snap_empty_pools = QuotaSnapshot(fetched_at=now, pools=())
-    assert ttl(snap_empty_pools, active=True) == ACTIVE_TTL
-    assert ttl(snap_empty_pools, active=False) == IDLE_TTL
+    assert ttl(snap_empty_pools, active=True, near_limit=False) == ACTIVE_TTL
+    assert ttl(snap_empty_pools, active=False, near_limit=False) == IDLE_TTL
 
     snap_empty_buckets = QuotaSnapshot(
         fetched_at=now, pools=(Pool(key="gemini", name="Gemini", buckets=()),)
     )
-    assert ttl(snap_empty_buckets, active=True) == ACTIVE_TTL
-    assert ttl(snap_empty_buckets, active=False) == IDLE_TTL
+    assert ttl(snap_empty_buckets, active=True, near_limit=False) == ACTIVE_TTL
+    assert ttl(snap_empty_buckets, active=False, near_limit=False) == IDLE_TTL
 
 
 def test_is_stale_none_entry() -> None:
     now = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
-    assert is_stale(None, now, active=False) is True
-    assert is_stale(None, now, active=True) is True
+    assert is_stale(None, now, active=False, near_limit=False) is True
+    assert is_stale(None, now, active=True, near_limit=False) is True
 
 
 def test_is_stale_active_boundaries() -> None:
@@ -111,11 +111,11 @@ def test_is_stale_active_boundaries() -> None:
     )
 
     # 59 seconds: TTL - 1s -> not stale
-    assert is_stale(entry, t0 + timedelta(seconds=59), active=True) is False
+    assert is_stale(entry, t0 + timedelta(seconds=59), active=True, near_limit=False) is False
     # 60 seconds: exactly TTL -> stale
-    assert is_stale(entry, t0 + timedelta(seconds=60), active=True) is True
+    assert is_stale(entry, t0 + timedelta(seconds=60), active=True, near_limit=False) is True
     # 61 seconds: TTL + 1s -> stale
-    assert is_stale(entry, t0 + timedelta(seconds=61), active=True) is True
+    assert is_stale(entry, t0 + timedelta(seconds=61), active=True, near_limit=False) is True
 
 
 def test_is_stale_near_limit_boundaries() -> None:
@@ -130,9 +130,9 @@ def test_is_stale_near_limit_boundaries() -> None:
         backoff_seconds=None,
     )
 
-    assert is_stale(entry, t0 + timedelta(seconds=89), active=False) is False
-    assert is_stale(entry, t0 + timedelta(seconds=90), active=False) is True
-    assert is_stale(entry, t0 + timedelta(seconds=91), active=False) is True
+    assert is_stale(entry, t0 + timedelta(seconds=89), active=False, near_limit=True) is False
+    assert is_stale(entry, t0 + timedelta(seconds=90), active=False, near_limit=True) is True
+    assert is_stale(entry, t0 + timedelta(seconds=91), active=False, near_limit=True) is True
 
 
 def test_is_stale_idle_boundaries() -> None:
@@ -147,9 +147,9 @@ def test_is_stale_idle_boundaries() -> None:
         backoff_seconds=None,
     )
 
-    assert is_stale(entry, t0 + timedelta(seconds=299), active=False) is False
-    assert is_stale(entry, t0 + timedelta(seconds=300), active=False) is True
-    assert is_stale(entry, t0 + timedelta(seconds=301), active=False) is True
+    assert is_stale(entry, t0 + timedelta(seconds=299), active=False, near_limit=False) is False
+    assert is_stale(entry, t0 + timedelta(seconds=300), active=False, near_limit=False) is True
+    assert is_stale(entry, t0 + timedelta(seconds=301), active=False, near_limit=False) is True
 
 
 def test_is_stale_exhausted_boundaries() -> None:
@@ -164,9 +164,9 @@ def test_is_stale_exhausted_boundaries() -> None:
         backoff_seconds=None,
     )
 
-    assert is_stale(entry, t0 + timedelta(seconds=599), active=False) is False
-    assert is_stale(entry, t0 + timedelta(seconds=600), active=False) is True
-    assert is_stale(entry, t0 + timedelta(seconds=601), active=False) is True
+    assert is_stale(entry, t0 + timedelta(seconds=599), active=False, near_limit=False) is False
+    assert is_stale(entry, t0 + timedelta(seconds=600), active=False, near_limit=False) is True
+    assert is_stale(entry, t0 + timedelta(seconds=601), active=False, near_limit=False) is True
 
 
 def test_is_stale_respects_backoff() -> None:
@@ -183,11 +183,13 @@ def test_is_stale_respects_backoff() -> None:
     )
 
     # During backoff window (9 min after t0, well past 60s active TTL)
-    assert is_stale(entry, t0 + timedelta(minutes=9), active=True) is False
+    assert is_stale(entry, t0 + timedelta(minutes=9), active=True, near_limit=False) is False
     # At backoff expiry -> checks TTL (which has elapsed) -> True
-    assert is_stale(entry, backoff_end, active=True) is True
+    assert is_stale(entry, backoff_end, active=True, near_limit=False) is True
     # After backoff expiry -> True
-    assert is_stale(entry, backoff_end + timedelta(seconds=1), active=True) is True
+    assert (
+        is_stale(entry, backoff_end + timedelta(seconds=1), active=True, near_limit=False) is True
+    )
 
 
 def test_next_backoff_doubling_and_cap() -> None:

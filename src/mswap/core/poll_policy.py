@@ -26,14 +26,14 @@ def _normalize_dt(dt: datetime) -> datetime:
     return dt.astimezone(UTC)
 
 
-def ttl(snapshot: QuotaSnapshot | None, *, active: bool) -> int:
+def ttl(snapshot: QuotaSnapshot | None, *, active: bool, near_limit: bool) -> int:
     """Compute TTL in seconds for a quota snapshot based on exhaustion, activity, and quota levels.
 
     Precedence:
     1. None -> 0
     2. Every bucket of every pool == 0 -> EXHAUSTED_TTL
     3. active -> ACTIVE_TTL
-    4. Any bucket < NEAR_LIMIT -> NEAR_LIMIT_TTL
+    4. Any bucket < NEAR_LIMIT (or near_limit) -> NEAR_LIMIT_TTL
     5. Else -> IDLE_TTL
     """
     if snapshot is None:
@@ -46,13 +46,13 @@ def ttl(snapshot: QuotaSnapshot | None, *, active: bool) -> int:
     if active:
         return ACTIVE_TTL
 
-    if any(b.remaining < NEAR_LIMIT for b in buckets):
+    if near_limit:
         return NEAR_LIMIT_TTL
 
     return IDLE_TTL
 
 
-def is_stale(entry: CacheEntry | None, now: datetime, *, active: bool) -> bool:
+def is_stale(entry: CacheEntry | None, now: datetime, *, active: bool, near_limit: bool) -> bool:
     """Determine whether a cache entry is stale and eligible for network refresh.
 
     Returns False if entry is within an active rate-limit backoff window.
@@ -70,7 +70,7 @@ def is_stale(entry: CacheEntry | None, now: datetime, *, active: bool) -> bool:
 
     fetched_utc = _normalize_dt(entry.fetched_at)
     elapsed = (now_utc - fetched_utc).total_seconds()
-    required_ttl = ttl(entry.snapshot, active=active)
+    required_ttl = ttl(entry.snapshot, active=active, near_limit=near_limit)
     return elapsed >= required_ttl
 
 

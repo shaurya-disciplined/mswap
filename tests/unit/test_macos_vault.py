@@ -216,59 +216,34 @@ def test_read_corrupt_hex_raises_vault_error() -> None:
         vault.read("mswap:slot1")
 
 
-def test_write_live_target_mirrors_existing_base64(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_write_live_target_always_base64(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
     runner = FakeRunner()
-    # 1. Existing live target has base64 prefix
-    runner.responses.append(
-        FakeProcess(0, stdout=b"go-keyring-base64:" + base64.b64encode(b"old-token") + b"\n")
-    )
-    # 2. Write succeeds
     runner.responses.append(FakeProcess(0, b"", b""))
 
     vault = MacKeychainVault(runner=runner)
     vault.write("mswaptest:live", b"new-token", "user")
 
-    write_call = runner.calls[1]
+    write_call = runner.calls[0]
     assert write_call["cmd"] == ["security", "-i"]
     stdin_text = write_call["input"].decode("utf-8")
     expected_b64 = "go-keyring-base64:" + base64.b64encode(b"new-token").decode("ascii")
     assert f"-w {expected_b64}" in stdin_text
 
 
-def test_write_live_target_mirrors_existing_hex(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_write_json_with_spaces_and_quotes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
     runner = FakeRunner()
-    # 1. Existing live target has hex prefix
-    runner.responses.append(
-        FakeProcess(0, stdout=b"go-keyring-encoded:" + b"old-token".hex().encode() + b"\n")
-    )
-    # 2. Write succeeds
     runner.responses.append(FakeProcess(0, b"", b""))
 
     vault = MacKeychainVault(runner=runner)
-    vault.write("mswaptest:live", b"new-token", "user")
+    json_bytes = b'{"access_token": "abc 123", "key": "value"}'
+    vault.write("mswaptest:live", json_bytes, "user")
 
-    write_call = runner.calls[1]
-    stdin_text = write_call["input"].decode("utf-8")
-    expected_hex = "go-keyring-encoded:" + b"new-token".hex()
-    assert f"-w {expected_hex}" in stdin_text
-
-
-def test_write_live_target_mirrors_plain(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
-    runner = FakeRunner()
-    # 1. Existing live target is plain (no prefix)
-    runner.responses.append(FakeProcess(0, stdout=b'{"plain": "token"}\n'))
-    # 2. Write succeeds
-    runner.responses.append(FakeProcess(0, b"", b""))
-
-    vault = MacKeychainVault(runner=runner)
-    vault.write("mswaptest:live", b'{"new": "token"}', "user")
-
-    write_call = runner.calls[1]
-    stdin_text = write_call["input"].decode("utf-8")
-    assert '-w {"new": "token"}' in stdin_text
+    call = runner.calls[0]
+    stdin_text = call["input"].decode("utf-8")
+    expected_b64 = "go-keyring-base64:" + base64.b64encode(json_bytes).decode("ascii")
+    assert f"-w {expected_b64}" in stdin_text
 
 
 def test_delete_generic_password() -> None:
@@ -416,46 +391,6 @@ def test_write_error_raises_vault_error() -> None:
     vault = MacKeychainVault(runner=runner)
     with pytest.raises(VaultError, match="macOS Keychain error writing"):
         vault.write("mswap:slot1", b"payload", "user")
-
-
-def test_write_live_target_fallback_to_base64_on_binary_data(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
-    runner = FakeRunner()
-    # 1. Existing item has plain text (no prefix)
-    runner.responses.append(FakeProcess(0, stdout=b"plain-existing-data\n"))
-    # 2. Write succeeds
-    runner.responses.append(FakeProcess(0, b"", b""))
-
-    vault = MacKeychainVault(runner=runner)
-    non_utf8_bytes = b"\x80\xff\xfe\xaa"
-    vault.write("mswaptest:live", non_utf8_bytes, "user")
-
-    call = runner.calls[1]
-    stdin_text = call["input"].decode("utf-8")
-    expected_b64 = "go-keyring-base64:" + base64.b64encode(non_utf8_bytes).decode("ascii")
-    assert f"-w {expected_b64}" in stdin_text
-
-
-def test_write_live_target_no_existing_item_binary_data(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("MSWAP_LIVE_TARGET", "mswaptest:live")
-    runner = FakeRunner()
-    # 1. No existing item (exit code 44)
-    runner.responses.append(FakeProcess(44, b"", b""))
-    # 2. Write succeeds
-    runner.responses.append(FakeProcess(0, b"", b""))
-
-    vault = MacKeychainVault(runner=runner)
-    non_utf8_bytes = b"\x80\xff\xfe\xbb"
-    vault.write("mswaptest:live", non_utf8_bytes, "user")
-
-    call = runner.calls[1]
-    stdin_text = call["input"].decode("utf-8")
-    expected_b64 = "go-keyring-base64:" + base64.b64encode(non_utf8_bytes).decode("ascii")
-    assert f"-w {expected_b64}" in stdin_text
 
 
 def test_dump_keychain_error_raises_vault_error() -> None:

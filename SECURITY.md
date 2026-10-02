@@ -15,7 +15,7 @@ All vulnerability reports are investigated promptly through GitHub Private Vulne
 
 `mswap` follows strict local storage and privacy boundaries:
 - **Account Metadata:** Stored locally in the application data directory (`accounts.json`, `usage.json`, etc.). This contains non-sensitive metadata such as slot numbers, email addresses, and cryptographic fingerprints (`sha256(refresh_token)[:16]`).
-- **Logins & Credentials:** Stored exclusively in your operating system's native credential store (Windows Credential Manager, macOS Keychain, or Linux Secret Service) under the target prefix `mswap:*`.
+- **Logins & Credentials:** Stored exclusively in your operating system's native credential store (Windows Credential Manager, macOS Keychain, or Linux Secret Service) under the target prefix `mswap:*`. If the user explicitly opts in to the file fallback, tokens are stored base64-encoded (not encrypted) on disk.
 
 ## What mswap Never Stores
 

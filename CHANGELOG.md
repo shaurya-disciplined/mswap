@@ -24,6 +24,13 @@ The first production release of **mswap**: multi-account switching, real-time qu
 - Public contract guard (`tests/integration/test_stability_contract.py`) enforcing intentional schema evolution: fails on contract changes unless overridden with `MSWAP_ALLOW_CONTRACT_CHANGE=1`, and rejects JSON removals or renames without incrementing `jsonout.SCHEMA_VERSION` (W7.S2).
 - Release launch kit: announcement templates for X/Twitter, Reddit, and Hacker News in `.agent/launch/` (W7.S4).
 
+### Fixed in 1.0
+
+- macOS vault always correctly base64 encodes the blob for `security -i` to prevent spaces and quotes from causing errors or escaping bounds.
+- `mswap --version` exactly matches the required spec format, and safely falls back if the agy version cannot be discovered.
+- Linux `SecretToolVault.list()` properly includes the current live target when it matches the search prefix.
+- `is_stale` strictly matches the specified contract by evaluating `near_limit` with the caller providing it.
+
 ### Security in 1.0
 
 - Threat model (STRIDE) for assets, trust boundaries and mitigations: `docs/security/threat-model.md` (W7.S1).

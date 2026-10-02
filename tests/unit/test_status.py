@@ -25,8 +25,8 @@ from mswap.vault.memory import MemoryVault
 
 def test_get_email_short() -> None:
     assert _get_email_short("alice@example.com") == "alice"
-    assert _get_email_short("freeagysomething@gmail.com") == "freeagys"
-    assert _get_email_short("1234567890@test.com") == "12345678"
+    assert _get_email_short("freeagysomething@example.com") == "freeagys"
+    assert _get_email_short("1234567890@example.com") == "12345678"
     assert _get_email_short("short") == "short"
     assert _get_email_short("") == "?"
 
@@ -35,7 +35,7 @@ def test_format_status_with_complete_data() -> None:
     now = datetime(2026, 10, 2, 12, 0, 0, tzinfo=UTC)
     acc = Account(
         slot=1,
-        email="freeagysomething@gmail.com",
+        email="freeagysomething@example.com",
         fp="fp1",
         alias="work",
         added_at=now,
@@ -74,7 +74,7 @@ def test_format_status_with_complete_data() -> None:
     text, data = format_status(fmt, acc, entry, now)
     assert text == "1:freeagys G99% C100%"
     assert data["slot"] == 1
-    assert data["email"] == "freeagysomething@gmail.com"
+    assert data["email"] == "freeagysomething@example.com"
     assert data["email_short"] == "freeagys"
     assert data["alias"] == "work"
     assert data["gemini_5h"] == 99

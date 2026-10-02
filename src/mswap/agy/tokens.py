@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import hashlib
 import json
@@ -9,7 +10,7 @@ import re
 from datetime import datetime, timedelta
 from typing import Any
 
-from mswap.core.errors import MswapError
+from mswap.core.errors import CorruptState, MswapError
 from mswap.util.http import Http
 
 TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - OAuth endpoint URL
@@ -25,6 +26,24 @@ def parse_go_time(s: str | None) -> datetime | None:
         return datetime.fromisoformat(normalized)
     except ValueError:
         return None
+
+
+def validate_blob(blob: bytes) -> dict[str, Any]:
+    """Validate that a blob is valid JSON and has a non-empty refresh_token."""
+    with contextlib.suppress(Exception):
+        data = json.loads(blob)
+        if isinstance(data, dict):
+            token = data.get("token")
+            if (
+                isinstance(token, dict)
+                and isinstance(token.get("refresh_token"), str)
+                and token["refresh_token"]
+            ):
+                return data
+    raise CorruptState(
+        "Saved login is damaged.",
+        hint="Sign in as that account in agy and run `mswap add`.",
+    )
 
 
 def fingerprint(blob: bytes) -> str:

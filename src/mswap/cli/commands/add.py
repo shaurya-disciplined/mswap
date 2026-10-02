@@ -17,10 +17,15 @@ from mswap.core.store import (
     live_target,
     slot_target,
 )
+from mswap.core.switcher import recover
 
 
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the add command."""
+    recovery_msg = recover(ctx)
+    if recovery_msg:
+        print(ctx.theme.dim(recovery_msg), file=ctx.err)
+
     new = getattr(args, "new", False) if isinstance(args, argparse.Namespace) else ("--new" in args)
     blob = ctx.vault.read(live_target())
     if not blob:

@@ -5,69 +5,45 @@ from __future__ import annotations
 import argparse
 
 from mswap.cli.context import AppContext
-from mswap.core.errors import MswapError, NothingToDo, UsageError
-from mswap.core.models import Account
-from mswap.core.store import (
-    LIVE_USER,
-    backup_last,
-    backup_original,
-    find_active,
-    live_target,
-    slot_target,
-)
+from mswap.core.switcher import recover, switch
+from mswap.ui import jsonout
 
 
 def run(ctx: AppContext, args: argparse.Namespace) -> int:
     """Execute the switch command."""
-    accounts = ctx.store.load()
-    if not accounts:
-        raise MswapError("No accounts saved yet.", hint="Run `mswap add` first.")
+    recovery_msg = recover(ctx)
+    if recovery_msg:
+        print(ctx.theme.dim(recovery_msg), file=ctx.err)
 
-    live = ctx.vault.read(live_target())
-    active: Account | None = find_active(accounts, live)
-
-    key = (
+    force = getattr(args, "force", False) if isinstance(args, argparse.Namespace) else False
+    selector = (
         getattr(args, "selector", None)
         if isinstance(args, argparse.Namespace)
         else (args[0] if args else None)
     )
 
-    if key is not None:
-        target = next(
-            (a for a in accounts if str(a.slot) == key or a.email.lower() == key.lower()),
-            None,
-        )
-        if not target:
-            raise UsageError(f"No account matching '{key}'.", hint="See `mswap list`.")
-    else:
-        if len(accounts) < 2:
-            raise NothingToDo("Only one account saved.", hint="Add another with `mswap add --new`.")
-        slots = [a.slot for a in accounts]
-        i = slots.index(active.slot) if active else -1
-        target = accounts[(i + 1) % len(accounts)]
+    result = switch(ctx, selector, force=force)
 
-    if active and target.slot == active.slot:
-        print(f"Already on account {target.slot}: {target.email}", file=ctx.out)
+    if ctx.json:
+        data = {
+            "status": result.status,
+            "from_slot": result.from_account.slot if result.from_account else None,
+            "to_slot": result.to_account.slot,
+            "agy_running": result.agy_running,
+        }
+        print(jsonout.ok("switch", data), file=ctx.out)
         return 0
 
-    blob = ctx.vault.read(slot_target(target.slot))
-    if not blob:
-        raise MswapError(
-            f"Saved login for account {target.slot} is missing.",
-            hint="Re-add it with `mswap add`.",
+    if result.status == "already_active":
+        print(
+            f"Already on account {result.to_account.slot}: {result.to_account.email}",
+            file=ctx.out,
         )
+        return 0
 
-    if live:
-        if ctx.vault.read(backup_original()) is None:
-            ctx.vault.write(backup_original(), live, LIVE_USER)
-        ctx.vault.write(backup_last(), live, LIVE_USER)
-        if active:
-            ctx.vault.write(slot_target(active.slot), live, active.email)
-
-    ctx.vault.write(live_target(), blob, LIVE_USER)
-    ok_mark = ctx.theme.ok("✓")
-    slot_str = ctx.theme.bold(str(target.slot))
-    print(f"{ok_mark} Switched agy to account {slot_str}: {target.email}", file=ctx.out)
+    ok_mark = ctx.theme.ok(ctx.theme.glyph_ok)
+    slot_str = ctx.theme.bold(str(result.to_account.slot))
+    print(f"{ok_mark} Switched agy to account {slot_str}: {result.to_account.email}", file=ctx.out)
     restart_hint = ctx.theme.dim(
         "  New agy sessions use it. Restart any agy that's already running."
     )

@@ -14,6 +14,9 @@ from typing import Any
 import pytest
 
 from mswap.cli.context import AppContext, set_context
+from mswap.core.events import Events
+from mswap.core.journal import Journal
+from mswap.core.locking import FileLock
 from mswap.core.store import AccountStore
 from mswap.ui.theme import Theme
 from mswap.util.clock import FrozenClock
@@ -119,7 +122,10 @@ def clock() -> FrozenClock:
 @pytest.fixture
 def ctx(vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path) -> AppContext:
     """Provide an isolated AppContext with in-memory streams and no-colour Theme."""
-    store = AccountStore(tmp_path / "home")
+    home = tmp_path / "home"
+    store = AccountStore(home)
+    journal = Journal(home / "journal.json")
+    events = Events(home / "events.log")
     return AppContext(
         vault=vault,
         http=http,
@@ -131,6 +137,11 @@ def ctx(vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path) 
         theme=Theme(color=False),
         json=False,
         quiet=False,
+        lock=lambda timeout=10.0, poll=0.05: FileLock(
+            home / "mswap.lock", timeout=timeout, poll=poll
+        ),
+        journal=journal,
+        events=events,
     )
 
 
@@ -139,7 +150,10 @@ def _inject_test_context(
     vault: MemoryVault, http: FakeHttp, clock: FrozenClock, tmp_path: Path
 ) -> Generator[None, None, None]:
     """Inject test context into cli context."""
-    store = AccountStore(tmp_path / "home")
+    home = tmp_path / "home"
+    store = AccountStore(home)
+    journal = Journal(home / "journal.json")
+    events = Events(home / "events.log")
     app_ctx = AppContext(
         vault=vault,
         http=http,
@@ -151,6 +165,11 @@ def _inject_test_context(
         theme=Theme(color=False),
         json=False,
         quiet=False,
+        lock=lambda timeout=10.0, poll=0.05: FileLock(
+            home / "mswap.lock", timeout=timeout, poll=poll
+        ),
+        journal=journal,
+        events=events,
     )
     set_context(app_ctx)
     yield

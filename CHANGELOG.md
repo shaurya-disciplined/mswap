@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- Crash-safe switching with journal, rollback and recovery; refuses to overwrite an unsaved login (W1.S4).
+
 ### Changed
 
 - Data moves to %LOCALAPPDATA%\mswap with automatic, non-destructive migration (W1.S3).

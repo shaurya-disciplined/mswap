@@ -176,14 +176,14 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
                 client_path = data_dir() / "client.json"
                 if client_path.exists():
                     try:
-                        with open(client_path, encoding="utf-8") as f:
+                        with client_path.open(encoding="utf-8") as f:
                             cache = json.load(f)
-                    except Exception:
+                    except (ValueError, OSError):
                         pass
 
                 av = agy_version(agy_exe(), cache)
                 agy_part = f" (agy {av})" if av and av != "0.0.0" else " (agy not found)"
-            except Exception:
+            except Exception:  # noqa: BLE001
                 agy_part = " (agy not found)"
 
             print(f"mswap {__version__}{agy_part} · not affiliated with Google")

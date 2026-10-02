@@ -252,10 +252,13 @@ class SecretToolVault:
             results = _parse_search_output(combined, prefix)
 
         live_tgt = self._live_target()
-        if live_tgt.startswith(prefix) and live_tgt not in results:
-            if self._read_raw(live_tgt) is not None:
-                results.append(live_tgt)
-                results.sort()
+        if (
+            live_tgt.startswith(prefix)
+            and live_tgt not in results
+            and self._read_raw(live_tgt) is not None
+        ):
+            results.append(live_tgt)
+            results.sort()
 
         return results
 

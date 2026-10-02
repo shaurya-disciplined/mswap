@@ -305,6 +305,34 @@ class AgyApi:
 
         return self._parse_models(data, self._now())
 
+    def raw_json(
+        self,
+        url: str,
+        access_token: str,
+        *,
+        json_body: Any,
+        endpoint_name: str,
+    ) -> Any:
+        """POST to an agy endpoint and return the decoded JSON body untouched.
+
+        Used only by `mswap debug record`, which reduces the result to its shape itself.
+        """
+        resp = self._request(
+            "POST",
+            url,
+            access_token=access_token,
+            json_body=json_body,
+            endpoint_name=endpoint_name,
+        )
+        try:
+            return resp.json()
+        except Exception as err:
+            raise ApiError(
+                "Unexpected response from Google's API.",
+                status=resp.status,
+                endpoint=endpoint_name,
+            ) from err
+
     def plan(self, access_token: str) -> str | None:
         """Fetch tier ID from loadCodeAssist endpoint."""
         resp = self._request(

@@ -128,3 +128,17 @@ mswap doctor --repair
 1. **Interrupted switches**: Resolves uncommitted journals by checking the live target against the target fingerprint and restoring the previous state if incomplete.
 2. **Orphaned vault targets**: Deletes untracked `mswap:slot*` vault entries that no longer correspond to accounts in `accounts.json`.
 3. **Stale temporary session files**: Cleans up abandoned session directories in `%LOCALAPPDATA%\mswap\sessions`.
+
+---
+
+## Reporting a bug
+
+If `mswap doctor` doesn't explain the problem, capture what agy's quota API returned:
+
+```powershell
+mswap debug record
+```
+
+It saves a folder with the *shape* of the responses (every text value is replaced by `<str:N>`, where N is its length), plus your mswap, agy and Python versions, OS and vault backend. It reads your login but never changes it. Before it finishes, mswap scans what it wrote and deletes the capture, saving nothing, if anything looks like a token or an email, so the folder is safe to attach to a [GitHub issue](https://github.com/shaurya-disciplined/mswap/issues/new/choose). Never paste tokens, credential blobs or `client.json` into an issue.
+
+See the [command reference](commands.md#mswap-debug-record---out-dir) for the flags and files.

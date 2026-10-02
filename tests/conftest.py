@@ -68,6 +68,9 @@ def _isolate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Generator[None,
     monkeypatch.setenv("MSWAP_VAULT", "memory")
     monkeypatch.setenv("MSWAP_NO_NETWORK", "1")
     monkeypatch.setenv("MSWAP_AGY_STATE", str(tmp_path / "agy-state"))
+    monkeypatch.setenv(
+        "MSWAP_AGY_EXE", str(tmp_path / "bin" / ("agy.exe" if sys.platform == "win32" else "agy"))
+    )
     monkeypatch.delenv("NO_COLOR", raising=False)
     monkeypatch.delenv("MSWAP_ASCII", raising=False)
     monkeypatch.delenv("MSWAP_DEBUG", raising=False)

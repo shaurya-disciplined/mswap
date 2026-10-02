@@ -11,6 +11,7 @@ from mswap.vault.base import Vault
 from mswap.vault.memory import MemoryVault
 
 _MEMORY_VAULT_SINGLETON: MemoryVault | None = None
+_MACOS_WARNED: bool = False
 
 
 def _demo_vault_path() -> Path:
@@ -21,6 +22,12 @@ def _demo_vault_path() -> Path:
         base = Path(local_app) if local_app else Path.home() / "AppData" / "Local"
         return base / "mswap" / "demo_vault.json"
     return Path.home() / ".mswap" / "demo_vault.json"
+
+
+def _dim(s: str) -> str:
+    if os.environ.get("NO_COLOR") or not getattr(sys.stderr, "isatty", lambda: False)():
+        return s
+    return f"\033[2m{s}\033[0m"
 
 
 def get_vault() -> Vault:
@@ -36,11 +43,23 @@ def get_vault() -> Vault:
         if _MEMORY_VAULT_SINGLETON is None:
             _MEMORY_VAULT_SINGLETON = MemoryVault()
         return _MEMORY_VAULT_SINGLETON
-    if backend in ("native", "windows"):
+    if backend in ("native", "windows", "macos"):
         if sys.platform == "win32":
             from mswap.vault.windows import WindowsVault
 
             return WindowsVault()
+        if sys.platform == "darwin":
+            global _MACOS_WARNED
+            if not _MACOS_WARNED:
+                _MACOS_WARNED = True
+                if os.environ.get("MSWAP_ACK_EXPERIMENTAL") != "1":
+                    print(
+                        _dim("macOS support is experimental. See docs/platforms.md."),
+                        file=sys.stderr,
+                    )
+            from mswap.vault.macos import MacKeychainVault
+
+            return MacKeychainVault()
         raise VaultError(
             "No supported credential store on this OS yet.",
             hint="macOS and Linux support arrives in v0.6.",
@@ -52,3 +71,9 @@ def reset_memory_vault() -> None:
     """Reset the memory vault singleton (used in test isolation)."""
     global _MEMORY_VAULT_SINGLETON
     _MEMORY_VAULT_SINGLETON = None
+
+
+def reset_macos_warned() -> None:
+    """Reset the macOS experimental warning flag (used in test isolation)."""
+    global _MACOS_WARNED
+    _MACOS_WARNED = False

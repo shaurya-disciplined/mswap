@@ -3,14 +3,15 @@
 </p>
 
 <p align="center">
-  <strong>mswap 1.0</strong> — <em>Unbreakable agy sessions.</em>
+  <strong>Unbreakable agy sessions: multi-account switcher, usage dashboard and autopilot for Google's Antigravity CLI.</strong>
 </p>
 
 <p align="center">
   <a href="https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml"><img src="https://github.com/shaurya-disciplined/mswap/actions/workflows/ci.yml/badge.svg" alt="ci" /></a>
-  <a href="https://pypi.org/project/mswap/"><img src="https://img.shields.io/pypi/v/mswap" alt="PyPI" /></a>
-  <a href="https://github.com/shaurya-disciplined/mswap/releases"><img src="https://img.shields.io/badge/version-1.0.0-cyan.svg" alt="version 1.0.0" /></a>
+  <a href="https://github.com/shaurya-disciplined/mswap/releases"><img src="https://img.shields.io/github/v/release/shaurya-disciplined/mswap" alt="latest release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="license" /></a>
+  <img src="https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-blue" alt="python versions" />
+  <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-lightgrey" alt="platforms" />
 </p>
 
 <p align="center">
@@ -19,168 +20,173 @@
 
 ## Why
 
-- **Pool-aware quota tracking**: View all your accounts' 5-hour and weekly quota pools (Gemini, Claude & GPT) in a single unified dashboard.
-- **One-second switching**: Switch accounts instantly without manual `/logout`, browser authentication popups, or lost session context.
-- **Zero data loss**: Every switch is transactional, journaled, and backed up before writing. If anything fails, it rolls back automatically.
-- **1.0 stability contract**: Frozen CLI grammar, semantic exit codes, and Schema 1 JSON output protected by automated golden snapshots ([stability contract](docs/stability.md)).
-- **Hardened security**: Comprehensive STRIDE threat model ([threat model](docs/security/threat-model.md)), zero tokens on disk, zero repo secrets, and strict file isolation.
+Antigravity (`agy`) quota windows often run out mid-work, blocking your flow. Switching Google accounts by hand requires `/logout`, opening a browser window, and risking lost session context.
+
+`mswap` fixes this. It stores your accounts safely in your OS credential manager, shows you exactly how much 5-hour and weekly quota you have left across all of them, and switches instantly—even automatically right before a limit stops your work.
 
 ## Install
 
+### Windows
 ```powershell
-# recommended
-uv tool install mswap
-# if Smart App Control blocks the mswap.exe launcher (Windows):
-uv tool install mswap ; mswap shim install   # writes %USERPROFILE%\.local\bin\mswap.cmd
-# or, without installing a launcher at all:
-uvx --from mswap python -m mswap list
+irm https://raw.githubusercontent.com/shaurya-disciplined/mswap/main/scripts/install.ps1 | iex
+```
+
+### macOS & Linux
+```bash
+curl -fsSL https://raw.githubusercontent.com/shaurya-disciplined/mswap/main/scripts/install.sh | sh
+```
+
+### Manual (uv tool)
+```bash
+uv tool install git+https://github.com/shaurya-disciplined/mswap
 ```
 
 ## Quick Start
 
-Get two accounts working in under 3 minutes:
+Get two accounts working in 60 seconds:
 
 1. **Sign in to your first account in agy**:
-   ```powershell
-   agy
+   ```console
+   $ agy
    ```
 2. **Save your first account**:
-   ```powershell
-   mswap add
+   ```console
+   $ mswap add --alias work
+   ✓ Added account 1: alice@example.com
+     To add another: `mswap add --new`. Don't use agy's /logout, it can revoke saved logins.
    ```
 3. **Prepare agy for a fresh sign-in**:
-   ```powershell
-   mswap add --new
+   ```console
+   $ mswap add --new
+   ✓ Added account 2: bob@example.com
+   ✓ Signed agy out on this PC only. The saved copy stays valid.
+     Now run agy, sign in with the next Google account, then run mswap add.
    ```
-4. **Sign in to your second account in agy**:
-   ```powershell
-   agy
+4. **Sign in to your second account**:
+   ```console
+   $ agy
    ```
-5. **Save your second account**:
-   ```powershell
-   mswap add
-   ```
-6. **View your accounts and remaining quota**:
-   ```powershell
-   mswap list
-   ```
-7. **Switch between accounts**:
-   ```powershell
-   mswap switch
-   ```
+5. **View your dashboard**:
+   ```console
+   $ mswap list
+   mswap · agy accounts
 
-## Commands
+    ▸ 1  alice@example.com (active)
+        Gemini        5h    ━━━━━━━━━━━─  92% left  resets 04:16 (4h 11m)
+                      week  ━━━━━━━━━━━─  98% left  resets Thu 08 Oct 18:04 (5d 17h)
+        Claude & GPT  5h    ━━━━━━━━━━━━ 100% left
+                      week  ━━━━━━━━━━━━ 100% left
+
+      2  bob@example.com  · alias personal
+        Gemini        5h    ━━━━━───────  45% left  resets 02:34 (2h 29m)
+                      week  ━━━━━━━━────  72% left  resets Tue 06 Oct 08:04 (3d 7h)
+        Claude & GPT  5h    ━━━━━━━━━━──  85% left  resets 03:14 (3h 9m)
+                      week  ━━━━━━━━━━──  90% left  resets Wed 07 Oct 14:04 (4d 13h)
+   ```
+6. **Switch back**:
+   ```console
+   $ mswap switch 1
+   ✓ Switched agy to account 1: alice@example.com
+     New agy sessions use it. Restart any agy that's already running.
+   ```
+7. **Turn on autopilot**:
+   ```console
+   $ mswap hook install
+   ✓ Installed hook set 'mswap-autopilot'.
+     hooks.json: ~/.gemini/hooks.json
+     Your other hooks are untouched.
+   ```
+   By default, the hook only notifies you when your quota is low. To enable automatic switching, run `mswap config set autopilot.hook_action switch`.
+   Alternatively, you can run `mswap auto` in a separate terminal for a continuous foreground autopilot loop.
+
+## Features and Commands
 
 | Command | Description |
 |---|---|
-| `mswap` / `mswap list` | Display saved accounts, active status, and quota bars (`--refresh` for live API query) |
-| `mswap add` | Save the current active `agy` login to `mswap` (`--new` also signs agy out here so you can add another account, `--alias NAME` names it) |
-| `mswap switch [SELECTOR]` | Switch to account by slot number, email, or alias (rotates if omitted; `--wait`, `--resume`, `--force`) |
-| `mswap current` | Display the active account |
-| `mswap alias SELECTOR NAME` | Assign a human-friendly alias to an account (`--clear` to remove) |
-| `mswap disable SELECTOR` | Exclude an account from automatic rotation |
-| `mswap enable SELECTOR` | Re-enable an account for rotation |
-| `mswap remove SELECTOR` | Remove a saved account and its stored vault credential |
-| `mswap status` | Cache-only one-liner for shell prompts, never touches the network ([prompt setup](docs/prompt-integration.md)) |
-| `mswap watch` | Live dashboard with keyboard controls (`q` quit, `r` refresh, `s` next, `1`-`9` switch) |
-| `mswap auto` | Autopilot: switch before a limit stops the work (`--once`, `--dry-run`, `--threshold N`, `--strategy`, `--focus`) |
-| `mswap hook install\|remove\|status` | Run autopilot checks at the end of each agy turn through agy's `Stop` hook |
-| `mswap schedule install\|remove\|status` | Run autopilot in the background (Task Scheduler, launchd or systemd) |
-| `mswap log [-n N]` | Show the audit trail of switches and autopilot decisions |
-| `mswap config [get\|set\|unset\|path\|list]` | Read and write `settings.toml` with validated keys |
-| `mswap export FILE [--accounts SEL,...]` | Write saved accounts to a passphrase-encrypted bundle (needs `mswap[export]`) |
-| `mswap import FILE [--force]` | Restore accounts from a bundle: new emails get the next free slot, existing ones are skipped (`--force` overwrites) |
-| `mswap completions SHELL` | Print a tab-completion script for PowerShell, bash, zsh or fish ([install](docs/completions.md)) |
-| `mswap shim install` | Windows: write a Smart App Control-safe `mswap.cmd` launcher |
-| `mswap doctor` | Check environment, vault health, and diagnostics (`--repair` to fix issues, `--online` for network checks) |
-| `mswap debug record` | Save secret-free API response shapes to attach to a bug report |
-| `mswap --version` | Show version and license information |
+| `mswap add [--new] [--alias NAME]` | Save the account agy is signed in to now (`--new` signs agy out) |
+| `mswap list [--refresh]` | Show all accounts and remaining 5h/weekly quota |
+| `mswap switch [SELECTOR]` | Rotate to the next account or switch to a specific one |
+| `mswap remove SELECTOR [--yes]` | Remove a saved account |
+| `mswap alias SELECTOR [NAME]` | Set or clear (`--clear`) an account alias |
+| `mswap disable` / `enable SELECTOR` | Exclude or include an account in automatic rotation |
+| `mswap current` | Show the active account |
+| `mswap status [--format FMT]` | Cache-only one-liner for shell prompts |
+| `mswap watch` | Live updating dashboard |
+| `mswap auto [--once] [--dry-run]` | Foreground autopilot loop |
+| `mswap hook install\|remove\|status` | Manage the `agy` Stop-hook for autopilot |
+| `mswap schedule install\|remove\|status` | Background autopilot via Task Scheduler |
+| `mswap shim install [--force]` | Write a Smart App Control-safe `mswap.cmd` |
+| `mswap log [-n N]` | Show audit trail of switches and autopilot |
+| `mswap config [get\|set\|unset\|path\|list]` | Manage `settings.toml` |
+| `mswap export FILE [--accounts SEL,...]` | Export accounts to an encrypted bundle |
+| `mswap import FILE [--force]` | Import accounts from an encrypted bundle |
+| `mswap completions SHELL` | Print a completion script (`powershell`, `bash`, `zsh`, `fish`) |
+| `mswap doctor [--repair] [--online]` | Diagnose environment and accounts |
+| `mswap debug record [--out DIR]` | Save secret-free API response shapes for bug reports |
 
-Every flag, example and exit code is in the [command reference](docs/commands.md). Machine-readable output is described in [docs/json-schema.md](docs/json-schema.md).
+## How it works
 
-Global options: `--json` for machine-readable output, `--no-color` to disable ANSI colors, `--ascii` for plain-text symbols, `-q`/`--quiet` to silence status messages, `-v`/`--verbose` for diagnostics.
+`mswap` uses the native OS credential manager to keep your tokens secure.
 
-## Moving Accounts Between Machines
-
-`mswap export` and `mswap import` carry your saved logins to another computer in one encrypted file. They need the optional crypto package:
-
-```
-uv tool install "mswap[export] @ git+https://github.com/shaurya-disciplined/mswap"
-mswap export accounts.mswap            # asks for a passphrase twice (12+ characters)
-mswap import accounts.mswap            # on the other machine
+```mermaid
+flowchart LR
+    Agy[agy] <-->|Reads active token| Active[Active agy Login\ngemini:antigravity]
+    Active -.->|mswap switch| Slot1[(Slot 1\nmswap:slot1)]
+    Active -.->|mswap switch| Slot2[(Slot 2\nmswap:slot2)]
+    Active -.->|mswap add| Slot3[(Slot 3\nmswap:slot3)]
 ```
 
-- The bundle is encrypted with a key derived from your passphrase (scrypt, then AES-256-GCM). A wrong passphrase or a damaged file is reported as `Wrong passphrase or damaged file.`
-- Anyone with this file AND the passphrase can use these accounts. Delete the file once you have imported it.
-- For scripts, set `MSWAP_EXPORT_PASSPHRASE`; the passphrase is never accepted on the command line, so it stays out of shell history.
-- Import never changes your active agy login. An email you already have is skipped (or replaced when its saved login is quarantined, or with `--force`).
-- `client.json` (the discovered OAuth client) is never exported.
-
-## Running agy Sessions
-
-When you run `mswap switch`, `mswap` detects running `agy.exe` instances and warns you:
-
-```text
-! agy is running (PID 1234). It won't pick up the switch until you restart it.
-```
-
-- **Wait for active sessions**: Use `mswap switch --wait` to wait until all running `agy` sessions exit before completing the switch.
-- **Resume your session**: Use `mswap switch --resume` to wait for running sessions to finish and print the exact resumption command for your task.
-- **Switch anyway**: Use `mswap switch --force` if you want to switch immediately while another terminal runs.
-
-Learn more in [How It Works](docs/how-it-works.md).
+When you run `mswap switch`, it swaps the token currently in the `gemini:antigravity` OS credential slot with the token in your chosen `mswap:slotX` slot, transactionally.
 
 ## Safety Model
 
-- **Dual backups**: `mswap` preserves `mswap:backup-last` (previous switch state) and `mswap:backup-original` (initial state) before modifying credentials.
-- **Transactional journal**: Switches write state to a journal file before mutating credentials. If an error occurs mid-write, `mswap` rolls back.
-- **Zero tokens on disk**: OAuth refresh tokens and access tokens are stored strictly in the operating system's native credential vault (Windows Credential Manager via DPAPI). `accounts.json` holds only metadata and token fingerprints.
-- **Refuses unknown logins**: `mswap` refuses to overwrite an active agy login that has not been saved, unless you explicitly pass `--force`.
-- **Minimal surface**: `mswap` touches only `gemini:antigravity` and `mswap:*` entries. It never touches Git, GitHub CLI (`gh`), MCP servers, or browser profiles.
-
-Read the complete [Security Policy](docs/security.md) and the [threat model](docs/security/threat-model.md).
+- **Your tokens stay in the OS**: Windows Credential Manager (`advapi32`), macOS Keychain Services, or Linux Secret Service.
+- **Zero tokens on disk**: Configuration files (`accounts.json`, `settings.toml`) never store OAuth refresh tokens or access tokens.
+- **Transactional safety**: Before every switch, `mswap` backs up your current state to `mswap:backup-last`. If an error occurs, it rolls back. Run `mswap doctor --repair` to fix an interrupted state.
+- **Unobtrusive**: `mswap` never touches Git credentials, browser profiles, or MCP servers.
+- **Concurrency aware**: If `agy` is currently running in another terminal, `mswap switch` will warn you that active sessions may keep using the old account until restarted. You can use `--wait` to wait for them to finish, or `--resume` to immediately restart your session with `agy -c`. If you run `mswap switch` from *inside* agy, it is blocked unless you use `--force`.
 
 ## Platform Support
 
-| Platform | Credential Backend | Status | Notes |
-|---|---|---|---|
-| **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs |
-| **macOS** | Keychain Services (`security` CLI) | **Experimental** | CI-tested backend; real-world storage unverified |
-| **Linux** | Secret Service (`secret-tool`) | **Experimental** | CI-tested backend; real-world storage unverified |
-| **Linux (Headless)** | File Vault fallback (`MSWAP_VAULT=file`) | **Experimental** | Opt-in unencrypted file fallback for headless/WSL environments |
+| Platform | Credential Backend | Status |
+|---|---|---|
+| **Windows** | Windows Credential Manager (`advapi32`) | **Supported** |
+| **macOS** | Keychain Services (`security` CLI) | **Supported** |
+| **Linux** | Secret Service (`secret-tool`) | **Supported** |
+| **Linux (Headless)** | File Vault fallback (`MSWAP_VAULT=file`) | **Experimental** (opt-in unencrypted fallback) |
 
-See [docs/platforms.md](docs/platforms.md) for architecture, security details, and instructions on running the probe to help verify real-world POSIX storage.
+## FAQ and Troubleshooting
 
-## Frequently Asked Questions
+### What happens to my quota? (Gemini vs Claude & GPT)
+Switching Google accounts shifts your Antigravity session to the new account's quota pool. Each account has its own quotas for Gemini, Claude, and GPT models. `mswap` helps you monitor these pools from one place.
 
-### Will I be charged?
-No. Switching accounts in `mswap` is completely free and costs nothing. Each Google account's own plan (e.g. Free tier, Google One AI Premium) determines its quota limits and any applicable billing.
+### I'm getting a Smart App Control warning on Windows
+Unsigned executables might be blocked by Windows Smart App Control. Use `mswap shim install` to create a lightweight `.cmd` launcher that bypasses this restriction safely by calling `python -m mswap` directly.
 
-### Does it break my MCP servers or GitHub CLI?
-No. `mswap` touches only the Antigravity CLI login credential `gemini:antigravity`. Your MCP servers, GitHub CLI (`gh`), Git credentials, and browser sessions are completely untouched. Account-linked features within agy (such as Google Drive integration or synced history) follow the switched account.
+### Why do I see "agy is running"?
+Tokens are loaded into `agy` at launch. Switching out the active token while `agy` is mid-thought could break its session. Wait for `agy` to finish its run, then `mswap switch`.
 
-### Is this allowed by Google?
-`mswap` is an independent developer utility that manages your own login tokens locally on your machine. It performs no automated sign-ins, does not bypass quota limits, and sends standard requests to official endpoints using your own credentials. You are responsible for ensuring your use complies with Google's Terms of Service.
+### Can I just use agy's `/logout`?
+Running `/logout` can completely revoke the token from Google's servers. The next time you want to use it, you'll have to complete the browser sign-in flow again. `mswap` saves the valid token safely and swaps it locally without revoking it, saving you the browser trip.
 
-### Why not use agy's `/logout`?
-Running agy's `/logout` command revokes the OAuth token on Google servers, requiring a full web browser sign-in next time. `mswap` rotates between your saved tokens locally without revoking them.
+### Where can I find more help?
+For more advanced issues, see the [Troubleshooting Guide](docs/troubleshooting.md) or run `mswap doctor --repair` to fix an interrupted state.
 
-### Does it work on macOS and Linux?
-Yes. macOS Keychain and Linux Secret Service backends are natively supported starting in v0.6.0. (see [Platform Support](#platform-support) and [docs/platforms.md](docs/platforms.md)).
+## Contributing
 
----
+1. Fork the repository
+2. Create a branch for your feature (`git checkout -b feature/my-feature`)
+3. Make your changes and run the tests (`uv run pytest`)
+4. Open a Pull Request
+5. Meteor reviews and merges the PR!
 
-## Troubleshooting
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
-If you encounter unexpected warnings or errors, run `mswap doctor` or see the [Troubleshooting Guide](docs/troubleshooting.md).
+## Support
 
-### Reporting a bug
-
-Run `mswap debug record` and attach the folder it saves to your [GitHub issue](https://github.com/shaurya-disciplined/mswap/issues/new/choose). It holds only the *shape* of agy's quota API responses (every text value is replaced by its length), plus version and OS details. mswap scans the capture before it finishes and deletes it if anything looks like a token or an email, so it is safe to attach. Never paste tokens, credential blobs or `client.json`.
-
-## Updates
-
-`mswap list` and `mswap doctor` print a dim line when a newer version is on PyPI, checked at most once a day. Turn it off with `mswap config set updates.check false` or `MSWAP_NO_UPDATE_CHECK=1`. mswap never upgrades itself; run `uv tool upgrade mswap`.
+- Found a bug or need help? DM me on Discord: **tut.meteor**
+- Open a [GitHub Issue](https://github.com/shaurya-disciplined/mswap/issues).
+- For security issues, please do not use public issues. Follow the instructions in [SECURITY.md](SECURITY.md).
 
 ---
 
@@ -191,3 +197,5 @@ mswap is an independent project, not affiliated with or endorsed by Google. Anti
 ---
 
 Built by Meteor · TUT: The Unbreakable Titan
+<br>
+MIT License

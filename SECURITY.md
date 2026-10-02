@@ -11,6 +11,10 @@ To report a vulnerability privately:
 
 All vulnerability reports are investigated promptly through GitHub Private Vulnerability Reporting.
 
+As a secondary channel, you can reach the maintainer directly on Discord: **tut.meteor**.
+
+> **Important**: Never paste OAuth tokens (`ya29...`, `1//...`), client secrets, or credential blobs in issues, Discord messages, or pull requests.
+
 ## What mswap Stores
 
 `mswap` follows strict local storage and privacy boundaries:

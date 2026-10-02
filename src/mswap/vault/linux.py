@@ -225,7 +225,7 @@ class SecretToolVault:
 
         cmd = ["secret-tool", "search", "--all", "mswap", "1"]
         res = self._run(cmd)
-        if res.returncode == 1 and not res.stdout:
+        if res.returncode == 1 and not res.stdout and not res.stderr:
             return []
         if res.returncode != 0:
             err = (
@@ -235,12 +235,18 @@ class SecretToolVault:
             )
             raise VaultError(f"Linux Secret Service error searching: {err}")
 
-        output = (
+        stdout = (
             res.stdout.decode("utf-8", errors="replace")
             if isinstance(res.stdout, bytes)
             else str(res.stdout or "")
         )
-        return _parse_search_output(output, prefix)
+        stderr = (
+            res.stderr.decode("utf-8", errors="replace")
+            if isinstance(res.stderr, bytes)
+            else str(res.stderr or "")
+        )
+        combined = stdout + "\n" + stderr
+        return _parse_search_output(combined, prefix)
 
 
 def _parse_search_output(output: str, prefix: str) -> list[str]:
@@ -253,6 +259,10 @@ def _parse_search_output(output: str, prefix: str) -> list[str]:
             tgt = f"{current['service']}:{current['username']}"
             if tgt.startswith(prefix):
                 results.add(tgt)
+        elif "label" in current:
+            lbl = current["label"]
+            if ":" in lbl and lbl.startswith(prefix):
+                results.add(lbl)
         current = {}
 
     for line in output.splitlines():
@@ -264,7 +274,11 @@ def _parse_search_output(output: str, prefix: str) -> list[str]:
         if line.startswith("["):
             flush()
             continue
-        if line.startswith("attribute."):
+        if line.startswith("label =") or line.startswith("label="):
+            parts = line.split("=", 1)
+            if len(parts) == 2:
+                current["label"] = parts[1].strip()
+        elif line.startswith("attribute."):
             parts = line.split("=", 1)
             if len(parts) == 2:
                 key = parts[0].strip()[len("attribute.") :].strip()

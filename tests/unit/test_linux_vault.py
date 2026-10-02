@@ -369,6 +369,16 @@ attribute.username = other_user
     assert runner.calls[0]["cmd"] == ["secret-tool", "search", "--all", "mswap", "1"]
 
 
+def test_search_output_attributes_on_stderr_and_label_fallback() -> None:
+    stdout_data = b"[/org/freedesktop/secrets/collection/login/1]\nlabel = mswap:slot1\n"
+    stderr_data = b"attribute.service = mswap\nattribute.username = slot1\nattribute.mswap = 1\n"
+    runner = FakeRunner()
+    runner.responses.append(FakeProcess(0, stdout=stdout_data, stderr=stderr_data))
+    vault = SecretToolVault(runner=runner)
+    res = vault.list("mswap:")
+    assert res == ["mswap:slot1"]
+
+
 def test_list_invalid_prefix_rejected() -> None:
     vault = SecretToolVault()
     with pytest.raises(VaultError, match="only alphanumeric characters and"):

@@ -189,6 +189,7 @@ def tick(
     *,
     dry_run: bool = False,
     force: bool = False,
+    cache_only: bool = False,
 ) -> Decision:
     """Execute one evaluation and execution tick of the autopilot loop."""
     now: datetime = ctx.clock.now() if hasattr(ctx, "clock") else datetime.now(UTC)
@@ -204,7 +205,7 @@ def tick(
 
     # Step a: Load accounts and refresh usage snapshots
     accounts: list[Account] = ctx.store.load()
-    entries = refresh_usage(ctx, accounts, force=False)
+    entries = refresh_usage(ctx, accounts, force=False, cache_only=cache_only)
 
     # Step b: Determine active slot from live credential fingerprint
     live = ctx.vault.read(live_target())

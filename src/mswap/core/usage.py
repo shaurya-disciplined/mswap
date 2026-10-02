@@ -49,11 +49,13 @@ def refresh_usage(
     accounts: Sequence[Account],
     *,
     force: bool = False,
+    cache_only: bool = False,
 ) -> dict[int, CacheEntry]:
     """Refresh quota usage for accounts in parallel using UsageCache and adaptive polling.
 
     Respects active backoff even when force=True.
     Preserves input order of accounts in the returned mapping.
+    If cache_only=True, only reads existing entries from cache without network fetches.
     """
     if not accounts:
         return {}
@@ -61,6 +63,23 @@ def refresh_usage(
     cache_path = ctx.store.root / "usage.json"
     cache = UsageCache(cache_path)
     cache.prune([a.fp for a in accounts])
+
+    if cache_only:
+        now = ctx.clock.now()
+        cached_entries: dict[int, CacheEntry] = {}
+        for acc in accounts:
+            cached = cache.get(acc.fp)
+            if cached is not None:
+                cached_entries[acc.slot] = cached
+            else:
+                cached_entries[acc.slot] = CacheEntry(
+                    fetched_at=now,
+                    snapshot=None,
+                    error=None,
+                    backoff_until=None,
+                    backoff_seconds=None,
+                )
+        return cached_entries
 
     live = ctx.vault.read(live_target())
     active: Account | None = find_active(accounts, live)

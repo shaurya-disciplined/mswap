@@ -19,6 +19,7 @@ from mswap.core.store import data_dir
 VALID_STRATEGIES: set[str] = {"best", "consume-first"}
 VALID_FOCUSES: set[str] = {"auto", "gemini", "3p", "both"}
 VALID_COLORS: set[str] = {"auto", "always", "never"}
+VALID_HOOK_ACTIONS: set[str] = {"notify", "switch"}
 
 
 @dataclass(frozen=True)
@@ -30,6 +31,7 @@ class AutopilotConfig:
     cooldown: int = 300
     strategy: Literal["best", "consume-first"] = "best"
     focus: Literal["auto", "gemini", "3p", "both"] = "auto"
+    hook_action: Literal["notify", "switch"] = "notify"
 
     def to_policy_settings(self, max_data_age_s: int = 900) -> PolicySettings:
         """Convert to policy.Settings instance."""
@@ -74,6 +76,7 @@ def _validate_autopilot(data: dict[str, Any]) -> AutopilotConfig:
     cooldown = 300
     strategy: Literal["best", "consume-first"] = "best"
     focus: Literal["auto", "gemini", "3p", "both"] = "auto"
+    hook_action: Literal["notify", "switch"] = "notify"
 
     for key, val in data.items():
         if key == "threshold":
@@ -115,6 +118,15 @@ def _validate_autopilot(data: dict[str, Any]) -> AutopilotConfig:
                     hint=f"Allowed values: {allowed}.",
                 )
             focus = val  # type: ignore[assignment]
+        elif key == "hook_action":
+            if not isinstance(val, str) or val not in VALID_HOOK_ACTIONS:
+                allowed = ", ".join(f"'{a}'" for a in sorted(VALID_HOOK_ACTIONS))
+                raise UsageError(
+                    f"Invalid value for 'autopilot.hook_action': '{val}'. "
+                    f"Allowed values are {allowed}.",
+                    hint=f"Allowed values: {allowed}.",
+                )
+            hook_action = val  # type: ignore[assignment]
         else:
             warnings.warn(
                 f"Unknown settings key 'autopilot.{key}' is ignored.",
@@ -128,6 +140,7 @@ def _validate_autopilot(data: dict[str, Any]) -> AutopilotConfig:
         cooldown=cooldown,
         strategy=strategy,
         focus=focus,
+        hook_action=hook_action,
     )
 
 

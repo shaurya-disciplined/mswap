@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from mswap.agy.install import os_arch, user_agent
 from mswap.core.errors import MswapError
 from mswap.util.http import Http
 
@@ -11,9 +12,11 @@ USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
 QUOTA_URL = "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary"
 
 
-def whoami(token: str, http: Http) -> str:
+def whoami(token: str, http: Http, ua: str | None = None) -> str:
     """Fetch the authenticated user's email address."""
     headers = {"Authorization": f"Bearer {token}"}
+    if ua:
+        headers["User-Agent"] = ua
     resp = http.request("GET", USERINFO_URL, headers=headers)
     if resp.status != 200:
         detail = ""
@@ -34,12 +37,17 @@ def whoami(token: str, http: Http) -> str:
     return "unknown"
 
 
-def quota_groups(token: str, http: Http, version: str) -> list[dict[str, Any]]:
+def quota_groups(
+    token: str,
+    http: Http,
+    version: str,
+    ua: str | None = None,
+) -> list[dict[str, Any]]:
     """Fetch user quota summary groups."""
-    ua = f"antigravity/{version} windows/amd64"
+    resolved_ua = ua if ua is not None else user_agent(version, os_arch())
     headers = {
         "Authorization": f"Bearer {token}",
-        "User-Agent": ua,
+        "User-Agent": resolved_ua,
         "Content-Type": "application/json",
     }
     resp = http.request("POST", QUOTA_URL, json_body={}, headers=headers)

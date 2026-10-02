@@ -14,8 +14,11 @@ _WINDOW_NAMES = {"5h": "5h", "weekly": "week"}
 
 def reset_text(iso: str | None, now: datetime, *, tz: tzinfo | None = None) -> str:
     """Format reset time relative to now."""
-    t = parse_go_time(iso)
-    if not t:
+    if not iso:
+        return ""
+    try:
+        t = parse_go_time(iso)
+    except Exception:
         return ""
     if t.tzinfo is None:
         t = t.replace(tzinfo=UTC)

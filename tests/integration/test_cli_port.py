@@ -18,24 +18,21 @@ from tests.conftest import make_blob
 
 
 def _seed_config(version: str = "1.2.12") -> None:
-    config_file = Path(os.environ["MSWAP_HOME"]) / "config.json"
-    config_file.parent.mkdir(parents=True, exist_ok=True)
     exe = agy_exe()
     exe_sig = f"{exe.stat().st_size}:{int(exe.stat().st_mtime)}" if exe.exists() else "dummy:1"
-    config_file.write_text(
-        json.dumps(
-            {
-                "exe_sig": exe_sig,
-                "client_id": (
-                    "1071006060591-faketestclient12345678901234.apps.googleusercontent.com"
-                ),
-                "secrets": ["GOCSPX-FAKEsecret12345678901234"],
-                "client_secret": "GOCSPX-FAKEsecret12345678901234",
-                "version": version,
-            }
-        ),
-        encoding="utf-8",
+    content = json.dumps(
+        {
+            "exe_sig": exe_sig,
+            "client_id": ("1071006060591-faketestclient12345678901234.apps.googleusercontent.com"),
+            "secrets": ["GOCSPX-FAKEsecret12345678901234"],
+            "client_secret": "GOCSPX-FAKEsecret12345678901234",
+            "version": version,
+        }
     )
+    for fname in ("config.json", "client.json"):
+        config_file = Path(os.environ["MSWAP_HOME"]) / fname
+        config_file.parent.mkdir(parents=True, exist_ok=True)
+        config_file.write_text(content, encoding="utf-8")
 
 
 def _load_fixture(name: str) -> dict[str, object]:
@@ -225,5 +222,7 @@ def test_cli_list(vault: MemoryVault, http: FakeHttp, capsys: pytest.CaptureFixt
     assert "Gemini" in captured.out
 
     # Verify User-Agent header
+    from mswap.agy.install import os_arch, user_agent
+
     quota_req = next(r for r in http.requests if "retrieveUserQuotaSummary" in r["url"])
-    assert quota_req["headers"]["User-Agent"] == "antigravity/1.2.12 windows/amd64"
+    assert quota_req["headers"]["User-Agent"] == user_agent("1.2.12", os_arch())

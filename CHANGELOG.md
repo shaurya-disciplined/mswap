@@ -6,6 +6,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ### Added
 
+- Dead-login quarantine; automatic re-detection of agy's sign-in client (W1.S5).
 - Crash-safe switching with journal, rollback and recovery; refuses to overwrite an unsaved login (W1.S4).
 
 ### Changed

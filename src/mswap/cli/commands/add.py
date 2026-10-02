@@ -6,7 +6,7 @@ import argparse
 import dataclasses
 
 from mswap.agy.api import whoami
-from mswap.agy.tokens import ensure_fresh, fingerprint
+from mswap.agy.tokens import fingerprint
 from mswap.cli.context import AppContext
 from mswap.core.errors import NotSignedIn
 from mswap.core.models import Account
@@ -31,7 +31,10 @@ def run(ctx: AppContext, args: argparse.Namespace) -> int:
     if not blob:
         raise NotSignedIn("agy isn't signed in.", hint="Run `agy`, sign in, then try again.")
 
-    token, _ = ensure_fresh(blob, ctx.http, ctx.clock.now())
+    from mswap.agy.tokens import TokenService
+
+    token_service = TokenService(ctx)
+    token = token_service.fresh_for_live(blob)
     email = whoami(token, ctx.http)
     accounts = ctx.store.load()
     existing = next((a for a in accounts if a.email.lower() == email.lower()), None)

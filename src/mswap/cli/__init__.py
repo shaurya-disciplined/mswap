@@ -35,6 +35,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap hook install|remove|status  manage agy Stop-hook for autopilot
   mswap schedule install|remove|status  background autopilot via Task Scheduler
   mswap log [-n 20]                 show audit trail of switches and autopilot
+  mswap config [get|set|unset|path|list] manage settings.toml
   mswap doctor [--repair] [--online] diagnose environment and accounts
 """
 
@@ -98,6 +99,10 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import doctor
 
             return int(doctor.run(app_ctx, parsed))
+        case "config":
+            from mswap.cli.commands import config
+
+            return int(config.run(app_ctx, parsed))
         case "__demo-seed":
             if os.environ.get("MSWAP_DEMO") == "1":
                 from mswap.cli.commands import demo_seed
@@ -133,6 +138,10 @@ def main(argv: list[str] | None = None, ctx: AppContext | None = None) -> int:
             return 0
 
         app_ctx = ctx or get_context(parsed)
+        if getattr(parsed, "json", False):
+            app_ctx.json = True
+        if getattr(parsed, "quiet", False):
+            app_ctx.quiet = True
 
         if not parsed.command:
             accounts = app_ctx.store.load()

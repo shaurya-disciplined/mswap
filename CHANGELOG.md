@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Added
+
+- `mswap config [get KEY | set KEY VALUE | unset KEY | path | list]` to read and write `settings.toml` with validated dotted keys, a tiny flat-table TOML writer that preserves unknown keys (comments are not preserved), and `--json` output (W6.S2).
+
 ## [0.6.0] - 2026-10-02
 
 ### Added

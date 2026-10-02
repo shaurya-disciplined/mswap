@@ -6,7 +6,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true
@@ -27,7 +27,7 @@ jobs:
         include: ${{ fromJSON(github.event.repository.private && '[{"os":"windows-latest","python":"3.14"},{"os":"ubuntu-latest","python":"3.11"}]' || '[{"os":"windows-latest","python":"3.11"},{"os":"windows-latest","python":"3.12"},{"os":"windows-latest","python":"3.13"},{"os":"windows-latest","python":"3.14"},{"os":"ubuntu-latest","python":"3.11"},{"os":"ubuntu-latest","python":"3.12"},{"os":"ubuntu-latest","python":"3.13"},{"os":"ubuntu-latest","python":"3.14"},{"os":"macos-latest","python":"3.11"},{"os":"macos-latest","python":"3.12"},{"os":"macos-latest","python":"3.13"},{"os":"macos-latest","python":"3.14"}]') }}
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "${{ matrix.python }}"
@@ -45,7 +45,7 @@ jobs:
         python: ["3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           python-version: "${{ matrix.python }}"
@@ -63,7 +63,7 @@ jobs:
     needs: [test, contract]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
         with:
           enable-cache: true

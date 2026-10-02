@@ -4,8 +4,12 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-02
+
 ### Added
 
+- Cross-platform CI matrix contract test suite running real backends on native CI runners (Windows Credential Manager, macOS temporary keychain, Linux headless gnome-keyring Secret Service, POSIX FileVault) (W5.S5).
+- Cross-platform support table in README and documentation (W5.S5).
 - Added: macOS/Linux paths, process detection, schedule via launchd/systemd (W5.S4).
 - Added: experimental Linux Secret Service support; opt-in file vault (W5.S3).
 - Added: experimental macOS Keychain support (W5.S2).
@@ -79,7 +83,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - CI workflow (W0.S4).
 - Community files and templates (W0.S5).
 
-[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/shaurya-disciplined/mswap/releases/tag/v0.1.0

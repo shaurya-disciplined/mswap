@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import sys
 from collections.abc import Generator
 from uuid import uuid4
@@ -49,12 +50,73 @@ class VaultContractBackend:
         return None
 
 
-@pytest.fixture(
-    params=["memory"]
-    + (["windows"] if sys.platform == "win32" else [])
-    + (["macos"] if sys.platform == "darwin" else [])
-    + (["file"] if sys.platform != "win32" else [])
-)
+def _has_macos_keychain() -> bool:
+    if sys.platform != "darwin":
+        return False
+    import os
+    import shutil
+
+    return bool(os.environ.get("MSWAP_MAC_KEYCHAIN") or shutil.which("security"))
+
+
+@functools.lru_cache(maxsize=1)
+def _has_linux_secret_service() -> bool:
+    if sys.platform != "linux":
+        return False
+    import shutil
+    import subprocess
+
+    if not shutil.which("secret-tool"):
+        return False
+    try:
+        probe_svc = "mswap_probe"
+        probe_user = f"probe_{uuid4().hex[:6]}"
+        store = subprocess.run(
+            [
+                "secret-tool",
+                "store",
+                "--label",
+                "mswap_probe",
+                "service",
+                probe_svc,
+                "username",
+                probe_user,
+            ],
+            input=b"probe",
+            capture_output=True,
+            timeout=5,
+        )
+        if store.returncode != 0:
+            return False
+        lookup = subprocess.run(
+            ["secret-tool", "lookup", "service", probe_svc, "username", probe_user],
+            capture_output=True,
+            timeout=5,
+        )
+        subprocess.run(
+            ["secret-tool", "clear", "service", probe_svc, "username", probe_user],
+            capture_output=True,
+            timeout=5,
+        )
+        return lookup.returncode == 0 and lookup.stdout.strip() == b"probe"
+    except Exception:
+        return False
+
+
+def _contract_backends() -> list[str]:
+    backends = ["memory"]
+    if sys.platform == "win32":
+        backends.append("windows")
+    if _has_macos_keychain():
+        backends.append("macos")
+    if _has_linux_secret_service():
+        backends.append("linux-secret-service")
+    if sys.platform != "win32":
+        backends.append("file")
+    return backends
+
+
+@pytest.fixture(params=_contract_backends())
 def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, None, None]:
     name = request.param
     prefix = f"mswaptest:contract:{uuid4().hex[:8]}:"
@@ -67,6 +129,7 @@ def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, N
     elif name == "windows":
         vault = WindowsVault()
     elif name == "macos":
+        import os
         import shutil
         import subprocess
         import tempfile
@@ -74,22 +137,29 @@ def backend(request: pytest.FixtureRequest) -> Generator[VaultContractBackend, N
 
         from mswap.vault.macos import MacKeychainVault
 
-        tmp_dir = Path(tempfile.mkdtemp(prefix="mswap_kc_"))
-        kc_path = tmp_dir / "mswaptest.keychain-db"
-        res = subprocess.run(
-            ["security", "create-keychain", "-p", "mswaptest", str(kc_path)],
-            capture_output=True,
-            text=True,
-        )
-        if res.returncode != 0:
-            shutil.rmtree(tmp_dir, ignore_errors=True)
-            pytest.skip(f"security create-keychain failed: {res.stderr}")
-        subprocess.run(
-            ["security", "unlock-keychain", "-p", "mswaptest", str(kc_path)],
-            check=True,
-            capture_output=True,
-        )
-        vault = MacKeychainVault(keychain=str(kc_path))
+        if "MSWAP_MAC_KEYCHAIN" in os.environ:
+            vault = MacKeychainVault(keychain=os.environ["MSWAP_MAC_KEYCHAIN"])
+        else:
+            tmp_dir = Path(tempfile.mkdtemp(prefix="mswap_kc_"))
+            kc_path = tmp_dir / "mswaptest.keychain-db"
+            res = subprocess.run(
+                ["security", "create-keychain", "-p", "mswaptest", str(kc_path)],
+                capture_output=True,
+                text=True,
+            )
+            if res.returncode != 0:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                pytest.skip(f"security create-keychain failed: {res.stderr}")
+            subprocess.run(
+                ["security", "unlock-keychain", "-p", "mswaptest", str(kc_path)],
+                check=True,
+                capture_output=True,
+            )
+            vault = MacKeychainVault(keychain=str(kc_path))
+    elif name == "linux-secret-service":
+        from mswap.vault.linux import SecretToolVault
+
+        vault = SecretToolVault()
     elif name == "file":
         import tempfile
         from pathlib import Path

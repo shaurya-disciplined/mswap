@@ -4,12 +4,12 @@ mswap is built to run cross-platform across Windows, macOS, and Linux with nativ
 
 ## Support Status
 
-| Platform | Credential Backend | Status | Introduced |
-|---|---|---|---|
-| **Windows** | Windows Credential Manager (`advapi32`) | Supported (Verified) | v0.1.0 |
-| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | Experimental | v0.6.0 (W5.S2) |
-| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | Experimental | v0.6.0 (W5.S3) |
-| **Linux (Headless)** | File Vault fallback (`FileVault` / `CompositeVault`) | Experimental (Opt-in) | v0.6.0 (W5.S3) |
+| Platform | Credential Backend | Status | Notes | Introduced |
+|---|---|---|---|---|
+| **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs | v0.1.0 |
+| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive | v0.6.0 (W5.S2) |
+| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | **Experimental** | CI-tested backend; real-world storage unverified until W5.S1 probe results arrive | v0.6.0 (W5.S3) |
+| **Linux (Headless)** | File Vault fallback (`FileVault` / `CompositeVault`) | **Experimental (Opt-in)** | Unencrypted file storage for headless/WSL environments | v0.6.0 (W5.S3) |
 
 ---
 

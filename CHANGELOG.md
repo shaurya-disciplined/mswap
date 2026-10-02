@@ -11,6 +11,7 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 - Added: experimental macOS Keychain support (W5.S2).
 - Pool-aware autopilot policy engine (W4.S1).
 - Safe, read-only diagnostic probe script for agy login storage on macOS and Linux (W5.S1).
+- Added: mswap schedule for background autopilot on Windows (W4.S4).
 
 ## [0.4.0] - 2026-10-02
 

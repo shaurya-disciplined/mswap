@@ -34,6 +34,7 @@ HELP_TEXT = f"""{bold("mswap")}: switch Google accounts in agy (Antigravity CLI)
   mswap auto [--once] [--dry-run]   foreground autopilot loop
   mswap hook install|remove|status  manage agy Stop-hook for autopilot
   mswap schedule install|remove|status  background autopilot via Task Scheduler
+  mswap shim install [--force]      write a Smart App Control-safe mswap.cmd
   mswap log [-n 20]                 show audit trail of switches and autopilot
   mswap config [get|set|unset|path|list] manage settings.toml
   mswap export FILE [--accounts S]  export accounts to an encrypted bundle
@@ -93,6 +94,10 @@ def _dispatch_command(cmd_name: str, app_ctx: AppContext, parsed: argparse.Names
             from mswap.cli.commands import schedule
 
             return int(schedule.run(app_ctx, parsed))
+        case "shim":
+            from mswap.cli.commands import shim
+
+            return int(shim.run(app_ctx, parsed))
         case "log":
             from mswap.cli.commands import log
 

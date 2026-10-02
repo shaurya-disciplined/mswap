@@ -336,7 +336,7 @@ def tick(
             if not dry_run:
                 from mswap.core import switcher
 
-                switcher.switch(ctx, str(decision.target_slot), force=force)
+                switcher.switch(ctx, str(decision.target_slot), force=force, source="autopilot")
                 state_to_save = AutopilotState(
                     last_switch_at=now,
                     last_from_slot=active_slot,
@@ -371,6 +371,7 @@ def tick(
         "active_pressure": decision.active_pressure,
         "target_pressure": decision.target_pressure,
         "dry_run": dry_run,
+        "source": "autopilot",
     }
     state_to_save = dataclasses.replace(state_to_save, last_decision=decision_dict)
     state_store.save(state_to_save)
@@ -384,6 +385,7 @@ def tick(
         active_pressure=decision.active_pressure,
         target_pressure=decision.target_pressure,
         dry_run=dry_run,
+        source="autopilot",
     )
 
     return decision

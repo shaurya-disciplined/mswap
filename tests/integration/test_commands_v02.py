@@ -935,3 +935,30 @@ def test_remove_with_recovery_message(
     captured = capsys.readouterr()
     assert "Recovered from interrupted switch" in captured.err
     assert "✓ Removed account 2: bob@example.com" in captured.out
+
+
+def test_log_command_integration(vault: MemoryVault, capsys: pytest.CaptureFixture[str]) -> None:
+    _seed_two_accounts(vault)
+
+    # Perform a switch to generate an event in events.log
+    rc_sw = main(["switch", "2", "--force"])
+    assert rc_sw == 0
+    capsys.readouterr()
+
+    # Run mswap log
+    rc_log = main(["log"])
+    assert rc_log == 0
+    captured = capsys.readouterr()
+    assert "switch" in captured.out
+    assert "1 → 2" in captured.out
+
+    # Run mswap log --json
+    rc_json = main(["log", "--json"])
+    assert rc_json == 0
+    captured_json = capsys.readouterr()
+    payload = json.loads(captured_json.out)
+    assert payload["schema"] == 1
+    assert payload["ok"] is True
+    assert payload["command"] == "log"
+    assert len(payload["data"]["events"]) >= 1
+    assert payload["data"]["events"][-1]["event"] == "switch"

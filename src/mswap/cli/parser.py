@@ -357,6 +357,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="show the scheduled task status and recent events",
     )
 
+    # log
+    p_log = subparsers.add_parser(
+        "log",
+        parents=[parent],
+        help="show audit trail of account switches and autopilot decisions",
+    )
+    p_log.add_argument(
+        "-n",
+        type=int,
+        default=20,
+        metavar="N",
+        help="number of recent events to show (default: 20)",
+    )
+
     if os.environ.get("MSWAP_DEMO") == "1":
         subparsers.add_parser(
             "__demo-seed",

@@ -69,3 +69,17 @@ jobs:
           enable-cache: true
       - run: uv build
       - run: uv run --with dist/*.whl --no-project python -m mswap --version
+  # The one check branch protection requires. A job skipped because a job it needs failed
+  # reports "skipped", which a required check treats as passing, so this job runs always()
+  # and fails unless every job it gathers succeeded. Add new CI jobs to `needs`.
+  ci-ok:
+    if: always()
+    needs: [quality, test, contract, build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Every CI job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done

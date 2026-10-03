@@ -4,10 +4,26 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-03
+
+Run `uv tool install --force git+https://github.com/shaurya-disciplined/mswap@v1.0.1` (or the one-line installer again) to upgrade. 1.0.0 can't tell you about this release, because its update check asked PyPI.
+
 ### Fixed
 
 - The update check now asks GitHub for the latest release instead of PyPI, where mswap isn't published, so it could never report a new version. The hint now prints the command that actually upgrades a GitHub install (`uv tool install --force git+https://github.com/shaurya-disciplined/mswap@vX`); `uv tool upgrade mswap` stays on the tag you installed.
 - Releases no longer depend on PyPI: the PyPI publish jobs only run when the `PUBLISH_TO_PYPI` repository variable is `true`, so a tag push creates the GitHub Release on its own, and the post-release check installs the tag from GitHub instead of PyPI.
+
+### Documentation
+
+- Quick start shows what each step really prints, and the second account is saved after signing in.
+- The agy hooks file is `~/.gemini/antigravity-cli/hooks.json`.
+- macOS and Linux are listed as Supported everywhere (the documented "experimental" notice never existed).
+- `docs/how-it-works.md` explains that a running agy session may keep the account it started with, what `--wait` and `--resume` do, and how write-back is detected.
+
+### CI
+
+- A single `ci-ok` check gathers every CI job; `main` is protected and requires it.
+- Pinned actions bumped: checkout v7, setup-uv v10, upload-artifact v7, download-artifact v8, CodeQL v4.
 
 ## [1.0.0] - 2026-10-02
 
@@ -27,7 +43,6 @@ The first production release of **mswap**: multi-account switching, real-time qu
 - 1.x stability contract and deprecation policy: `docs/stability.md`.
 - Golden contract snapshots for every command's `--json` output (`tests/golden/json/*.json`) and every command's `--help` definition (`tests/golden/help/*.txt`).
 - Public contract guard (`tests/integration/test_stability_contract.py`) enforcing intentional schema evolution: fails on contract changes unless overridden with `MSWAP_ALLOW_CONTRACT_CHANGE=1`, and rejects JSON removals or renames without incrementing `jsonout.SCHEMA_VERSION`.
-- Release launch kit: announcement templates for X/Twitter, Reddit, and Hacker News in `.agent/launch/`.
 
 ### Fixed in 1.0
 

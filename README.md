@@ -58,26 +58,28 @@ Get two accounts working in 60 seconds:
 3. **Prepare agy for a fresh sign-in**:
    ```console
    $ mswap add --new
-   ✓ Added account 2: bob@example.com
+   ✓ Updated account 1: alice@example.com
    ✓ Signed agy out on this PC only. The saved copy stays valid.
      Now run agy, sign in with the next Google account, then run mswap add.
    ```
-4. **Sign in to your second account**:
+4. **Sign in to your second account, then save it**:
    ```console
    $ agy
+   $ mswap add --alias personal
+   ✓ Added account 2: bob@example.com
    ```
 5. **View your dashboard**:
    ```console
    $ mswap list
    mswap · agy accounts
 
-    ▸ 1  alice@example.com (active)
+      1  alice@example.com  · alias work
         Gemini        5h    ━━━━━━━━━━━─  92% left  resets 04:16 (4h 11m)
                       week  ━━━━━━━━━━━─  98% left  resets Thu 08 Oct 18:04 (5d 17h)
         Claude & GPT  5h    ━━━━━━━━━━━━ 100% left
                       week  ━━━━━━━━━━━━ 100% left
 
-      2  bob@example.com  · alias personal
+    ▸ 2  bob@example.com (active)  · alias personal
         Gemini        5h    ━━━━━───────  45% left  resets 02:34 (2h 29m)
                       week  ━━━━━━━━────  72% left  resets Tue 06 Oct 08:04 (3d 7h)
         Claude & GPT  5h    ━━━━━━━━━━──  85% left  resets 03:14 (3h 9m)
@@ -93,10 +95,11 @@ Get two accounts working in 60 seconds:
    ```console
    $ mswap hook install
    ✓ Installed hook set 'mswap-autopilot'.
-     hooks.json: ~/.gemini/hooks.json
+     hooks.json: ~/.gemini/antigravity-cli/hooks.json
      Your other hooks are untouched.
    ```
    By default, the hook only notifies you when your quota is low. To enable automatic switching, run `mswap config set autopilot.hook_action switch`.
+   A switch changes the login for the next agy start. An agy session that is already running may keep the account it started with, so continue the conversation with `agy -c` after the turn ends.
    Alternatively, you can run `mswap auto` in a separate terminal for a continuous foreground autopilot loop.
 
 ## Features and Commands

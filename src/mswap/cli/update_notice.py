@@ -10,7 +10,7 @@ from mswap import __version__
 from mswap.cli.context import AppContext
 from mswap.core.errors import MswapError
 from mswap.core.settings import load_settings
-from mswap.core.updates import update_available, update_check_enabled
+from mswap.core.updates import update_available, update_check_enabled, upgrade_command
 
 
 def maybe_print_update_notice(ctx: AppContext) -> None:
@@ -28,7 +28,7 @@ def maybe_print_update_notice(ctx: AppContext) -> None:
         return
     print(
         ctx.theme.dim(
-            f"  mswap {latest} is available (you have {__version__}): uv tool upgrade mswap"
+            f"  mswap {latest} is available (you have {__version__}): {upgrade_command(latest)}"
         ),
         file=ctx.out,
     )

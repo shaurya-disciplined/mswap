@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Fixed
+
+- The update check now asks GitHub for the latest release instead of PyPI, where mswap isn't published, so it could never report a new version. The hint now prints the command that actually upgrades a GitHub install (`uv tool install --force git+https://github.com/shaurya-disciplined/mswap@vX`); `uv tool upgrade mswap` stays on the tag you installed.
+- Releases no longer depend on PyPI: the PyPI publish jobs only run when the `PUBLISH_TO_PYPI` repository variable is `true`, so a tag push creates the GitHub Release on its own, and the post-release check installs the tag from GitHub instead of PyPI.
+
 ## [1.0.0] - 2026-10-02
 
 The first production release of **mswap**: multi-account switching, real-time quota intelligence, and hands-free autopilot for Google's Antigravity CLI (`agy`).

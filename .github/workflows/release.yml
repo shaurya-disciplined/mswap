@@ -56,7 +56,10 @@ jobs:
   publish-testpypi:
     needs: build
     runs-on: ubuntu-latest
-    if: contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc')
+    # PyPI publishing is opt-in: set the repository variable PUBLISH_TO_PYPI=true once the
+    # trusted publisher exists on (Test)PyPI. Until then these jobs are skipped and the GitHub
+    # Release below is the only distribution channel (the installers install from its tag).
+    if: vars.PUBLISH_TO_PYPI == 'true' && (contains(github.ref_name, 'a') || contains(github.ref_name, 'b') || contains(github.ref_name, 'rc'))
     permissions:
       id-token: write
     steps:
@@ -74,7 +77,7 @@ jobs:
   publish-pypi:
     needs: build
     runs-on: ubuntu-latest
-    if: "!contains(github.ref_name, 'a') && !contains(github.ref_name, 'b') && !contains(github.ref_name, 'rc')"
+    if: "vars.PUBLISH_TO_PYPI == 'true' && !contains(github.ref_name, 'a') && !contains(github.ref_name, 'b') && !contains(github.ref_name, 'rc')"
     environment: pypi
     permissions:
       id-token: write

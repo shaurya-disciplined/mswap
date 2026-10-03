@@ -24,30 +24,20 @@ jobs:
         with:
           enable-cache: false
 
-      - name: Verify published package from PyPI
+      - name: Verify the release installs from its tag
         shell: bash
         env:
           # Passed through the environment, never interpolated into the script: a tag name is
           # attacker-shaped text as far as the shell is concerned.
           TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
           RUNNER_LABEL: ${{ matrix.os }}
         run: |
-          VERSION="${TAG#v}"
-          echo "Verifying mswap $VERSION installation from PyPI on $RUNNER_LABEL..."
-          success=0
-          for attempt in 1 2 3 4 5; do
-            echo "Attempt $attempt of 5 (waiting for PyPI propagation)..."
-            if uvx --from "mswap==$VERSION" python -m mswap --version; then
-              echo "mswap==$VERSION successfully verified!"
-              success=1
-              break
-            fi
-            if [ "$attempt" -lt 5 ]; then
-              echo "Waiting 60 seconds before next attempt..."
-              sleep 60
-            fi
-          done
-          if [ "$success" -ne 1 ]; then
-            echo "Failed to install and verify mswap==$VERSION after 5 attempts"
-            exit 1
-          fi
+          # Same source the installers use: uv installs mswap straight from the release tag.
+          echo "Verifying mswap $TAG installs from GitHub on $RUNNER_LABEL..."
+          out=$(uvx --from "git+https://github.com/$REPO@$TAG" mswap --version)
+          echo "$out"
+          case "$out" in
+            *"${TAG#v}"*) echo "mswap $TAG verified." ;;
+            *) echo "Installed version does not match $TAG"; exit 1 ;;
+          esac

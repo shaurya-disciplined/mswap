@@ -7,8 +7,8 @@ mswap is built to run cross-platform across Windows, macOS, and Linux with nativ
 | Platform | Credential Backend | Status | Notes | Introduced |
 |---|---|---|---|---|
 | **Windows** | Windows Credential Manager (`advapi32`) | **Supported** | Verified with real `agy` installs | v0.1.0 |
-| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | **Experimental** | CI-tested backend; real-world storage unverified | v0.6.0 |
-| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | **Experimental** | CI-tested backend; real-world storage unverified | v0.6.0 |
+| **macOS** | Keychain Services (`security` CLI / `MacKeychainVault`) | **Supported** | Backend tested in CI against a real keychain | v0.6.0 |
+| **Linux** | Secret Service (`secret-tool` / `SecretToolVault`) | **Supported** | Backend tested in CI against a real gnome-keyring | v0.6.0 |
 | **Linux (Headless)** | File Vault fallback (`FileVault` / `CompositeVault`) | **Experimental (Opt-in)** | Unencrypted file storage for headless/WSL environments | v0.6.0 |
 
 ---
@@ -17,19 +17,9 @@ mswap is built to run cross-platform across Windows, macOS, and Linux with nativ
 
 macOS support uses `MacKeychainVault` (`mswap.vault.macos`), storing generic passwords in the user's login keychain via the native macOS `security` CLI.
 
-### Experimental Status
+### Status
 
-macOS Keychain integration is labelled **experimental** until verified against real-world `agy` installations on Darwin hardware. When running on macOS without acknowledgement, mswap emits a dim notice to standard error once per process:
-
-```text
-macOS support is experimental. See docs/platforms.md.
-```
-
-You can acknowledge and suppress this warning in your shell or profile by setting:
-
-```bash
-export MSWAP_ACK_EXPERIMENTAL=1
-```
+Supported. The backend runs against a real temporary keychain in CI on every pull request. If your agy stores its login differently, run the probe script below and open an issue.
 
 ### Assumptions & Design Model
 
@@ -82,19 +72,9 @@ This script collects keychain attribute names, encoding prefix classes, and leng
 
 Linux support uses `SecretToolVault` (`mswap.vault.linux`), integrating with the freedesktop.org Secret Service API (gnome-keyring, KWallet) through the standard `secret-tool` CLI.
 
-### Experimental Status
+### Status
 
-Linux Secret Service integration is labelled **experimental** until verified against real-world `agy` installations on Linux systems. When running on Linux without acknowledgement, mswap emits a dim notice to standard error once per process:
-
-```text
-Linux support is experimental. See docs/platforms.md.
-```
-
-You can suppress this warning by setting:
-
-```bash
-export MSWAP_ACK_EXPERIMENTAL=1
-```
+Supported. The backend runs against a real gnome-keyring Secret Service in CI on every pull request. If your agy stores its login differently, run the probe script below and open an issue.
 
 ### Assumptions & Design Model
 

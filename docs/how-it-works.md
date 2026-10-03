@@ -141,11 +141,20 @@ sequenceDiagram
 
 When switching accounts:
 
-- `agy` loads credentials into memory upon starting a turn or refreshing tokens.
-- If `agy.exe` is running while you run `mswap switch`, `mswap` detects running agy instances via native Windows system queries.
-- `mswap` prints a clear notice: `! agy is running (PID 1234). It won't pick up the switch until you restart it.`
-- You can use `--wait` to have `mswap switch` wait until running agy instances terminate before completing the switch.
-- You can use `--resume` to wait for agy to exit and receive the exact resumption command for your session.
+- A switch rewrites the login that agy reads when it starts. **A running agy session may keep the account it started with** until you restart it: it holds its token in memory.
+- mswap finds running agy processes (Toolhelp32 on Windows, `ps` on macOS and Linux) and warns: `! agy is running (N session(s)). Those sessions may keep using the old account until restarted.`
+- `--wait` waits for every agy process to exit before switching. `--resume` switches, then starts `agy -c` to continue the same conversation on the new account.
+- Running `mswap switch` from inside agy is refused unless you pass `--force`.
+
+### Write-back
+
+A running agy can save its refreshed token back to `gemini:antigravity` after mswap switched it, which quietly puts the old account back. agy isn't under mswap's lock, so this can't be prevented, only detected:
+
+- The switch itself is verified by reading the login back before the journal commits.
+- The autopilot's write-back detector notices when the live login returns to the account it just left, within 2 hours of a switch it made. It then logs `writeback_suspected`, holds for twice the cooldown instead of switching again, and tells you to restart agy sessions.
+- `mswap current` and `mswap list` always show the account agy will really use, because they read the live login, not mswap's last action.
+
+The same applies to the agy `Stop` hook with `autopilot.hook_action = switch`: the switch happens at the end of a turn, and the session that just finished may keep its old account. Continue with `agy -c` to pick up the new one.
 
 ---
 

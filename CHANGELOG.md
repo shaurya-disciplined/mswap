@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Documentation
+
+- New logo: the "Step" mark (an m whose taller arch is the active account) and wordmark, with light and dark README variants and a social preview image in `docs/assets/`.
+
 ## [1.0.1] - 2026-10-03
 
 Run `uv tool install --force git+https://github.com/shaurya-disciplined/mswap@v1.0.1` (or the one-line installer again) to upgrade. 1.0.0 can't tell you about this release, because its update check asked PyPI.

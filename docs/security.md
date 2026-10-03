@@ -57,6 +57,7 @@ In short:
 - **Direct Official Communication**: Network requests are made directly over HTTPS/TLS to Google's official endpoints:
   - OAuth token refresh: `https://oauth2.googleapis.com/token`
   - Quota reporting: `https://cloudcode-pa.googleapis.com/v1internal:loadCodeAssist`
+  - Update check (no credentials, at most once a day): `https://api.github.com/repos/shaurya-disciplined/mswap/releases/latest`
   `mswap` uses no intermediary proxies, telemetry servers, or third-party cloud infrastructure.
 - **Zero Runtime Dependencies**: The core package relies solely on the Python standard library, eliminating third-party supply-chain attack surfaces.
 - **Automated Redaction**: All error handlers and output routines pass through regex scrubbers that redact OAuth access tokens (`ya29.*`), refresh tokens (`1//*`), and client secrets (`GOCSPX-*`).

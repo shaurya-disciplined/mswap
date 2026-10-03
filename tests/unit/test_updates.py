@@ -9,12 +9,13 @@ from pathlib import Path
 import pytest
 
 from mswap.core.updates import (
-    PYPI_URL,
+    LATEST_RELEASE_URL,
     is_newer,
     latest_version,
     parse_version,
     update_available,
     update_check_enabled,
+    upgrade_command,
 )
 from mswap.util.clock import FrozenClock
 from mswap.util.http import FakeHttp, HttpResponse, json_response
@@ -22,8 +23,8 @@ from mswap.util.http import FakeHttp, HttpResponse, json_response
 NOW = datetime(2026, 10, 2, 12, 0, tzinfo=UTC)
 
 
-def _pypi(version: str) -> HttpResponse:
-    return json_response({"info": {"version": version}})
+def _release(version: str) -> HttpResponse:
+    return json_response({"tag_name": f"v{version}", "draft": False, "prerelease": False})
 
 
 def _seed_cache(path: Path, *, age: timedelta, latest: str | None) -> None:
@@ -67,7 +68,7 @@ def test_unparseable_versions_never_report_an_update(bad: str) -> None:
 
 def test_fetch_when_no_cache_writes_cache(tmp_path: Path, http: FakeHttp) -> None:
     cache = tmp_path / "update.json"
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.9.0"
     saved = json.loads(cache.read_text(encoding="utf-8"))
     assert saved == {"checked_at": NOW.isoformat(), "latest": "0.9.0"}
@@ -84,7 +85,7 @@ def test_fresh_cache_makes_no_request(tmp_path: Path, http: FakeHttp) -> None:
 def test_cache_exactly_24h_old_is_stale(tmp_path: Path, http: FakeHttp) -> None:
     cache = tmp_path / "update.json"
     _seed_cache(cache, age=timedelta(hours=24), latest="0.8.0")
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.9.0"
     assert len(http.requests) == 1
 
@@ -92,7 +93,7 @@ def test_cache_exactly_24h_old_is_stale(tmp_path: Path, http: FakeHttp) -> None:
 def test_cache_from_the_future_is_stale(tmp_path: Path, http: FakeHttp) -> None:
     cache = tmp_path / "update.json"
     _seed_cache(cache, age=timedelta(hours=-3), latest="0.8.0")
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.9.0"
 
 
@@ -100,7 +101,7 @@ def test_cache_from_the_future_is_stale(tmp_path: Path, http: FakeHttp) -> None:
 def test_corrupt_cache_is_ignored(tmp_path: Path, http: FakeHttp, content: str) -> None:
     cache = tmp_path / "update.json"
     cache.write_text(content, encoding="utf-8")
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.9.0"
 
 
@@ -109,7 +110,7 @@ def test_naive_cache_timestamp_is_ignored(tmp_path: Path, http: FakeHttp) -> Non
     cache.write_text(
         json.dumps({"checked_at": "2026-10-02T11:00:00", "latest": "0.1.0"}), encoding="utf-8"
     )
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.9.0"
 
 
@@ -136,23 +137,31 @@ def test_network_failure_is_silent_and_cached_for_a_day(tmp_path: Path) -> None:
 def test_failed_refresh_keeps_last_known_version(tmp_path: Path, http: FakeHttp) -> None:
     cache = tmp_path / "update.json"
     _seed_cache(cache, age=timedelta(days=3), latest="0.8.0")
-    http.add("GET", PYPI_URL, HttpResponse(status=503, body=b""))
+    http.add("GET", LATEST_RELEASE_URL, HttpResponse(status=503, body=b""))
     assert latest_version(http, FrozenClock(NOW), cache) == "0.8.0"
     assert json.loads(cache.read_text(encoding="utf-8"))["checked_at"] == NOW.isoformat()
 
 
 @pytest.mark.parametrize(
-    "body", [b"not json", b'{"info": {}}', b'{"info": {"version": 7}}', b"[]", b'{"info": null}']
+    "body",
+    [
+        b"not json",
+        b"{}",
+        b'{"tag_name": 7}',
+        b"[]",
+        b'{"tag_name": null}',
+        b'{"tag_name": "1.0.0"}',
+    ],
 )
-def test_malformed_pypi_payload_is_silent(tmp_path: Path, http: FakeHttp, body: bytes) -> None:
-    http.add("GET", PYPI_URL, HttpResponse(status=200, body=body))
+def test_malformed_release_payload_is_silent(tmp_path: Path, http: FakeHttp, body: bytes) -> None:
+    http.add("GET", LATEST_RELEASE_URL, HttpResponse(status=200, body=body))
     assert latest_version(http, FrozenClock(NOW), tmp_path / "update.json") is None
 
 
 def test_unwritable_cache_location_is_silent(tmp_path: Path, http: FakeHttp) -> None:
     blocker = tmp_path / "blocker"
     blocker.write_text("a file, not a directory", encoding="utf-8")
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     assert latest_version(http, FrozenClock(NOW), blocker / "update.json") == "0.9.0"
 
 
@@ -162,7 +171,7 @@ def test_request_uses_three_second_timeout(tmp_path: Path) -> None:
     class Spy:
         def request(self, method: str, url: str, *, timeout: float = 20.0) -> HttpResponse:
             seen.append(timeout)
-            return _pypi("0.9.0")
+            return _release("0.9.0")
 
     latest_version(Spy(), FrozenClock(NOW), tmp_path / "update.json")  # type: ignore[arg-type]  # test double
     assert seen == [3.0]
@@ -170,7 +179,7 @@ def test_request_uses_three_second_timeout(tmp_path: Path) -> None:
 
 def test_update_available(tmp_path: Path, http: FakeHttp) -> None:
     cache = tmp_path / "update.json"
-    http.add("GET", PYPI_URL, _pypi("0.9.0"))
+    http.add("GET", LATEST_RELEASE_URL, _release("0.9.0"))
     clock = FrozenClock(NOW)
     assert update_available(http, clock, cache, "0.6.0") == "0.9.0"
     assert update_available(http, clock, cache, "0.9.0") is None
@@ -190,3 +199,9 @@ def test_update_available(tmp_path: Path, http: FakeHttp) -> None:
 )
 def test_update_check_enabled(env: dict[str, str], setting: bool, expected: bool) -> None:
     assert update_check_enabled(env, setting) is expected
+
+
+def test_upgrade_command_installs_the_release_tag() -> None:
+    assert upgrade_command("1.2.0") == (
+        "uv tool install --force git+https://github.com/shaurya-disciplined/mswap@v1.2.0"
+    )

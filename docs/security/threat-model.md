@@ -38,7 +38,7 @@ as the current user, in short-lived processes, with no server and no telemetry.
                              │      ├────► B3 subprocesses: agy, schtasks, tasklist, icacls,
                              │      │        launchctl, systemctl, security, secret-tool, ps
                              │      ├────► B4 network: oauth2.googleapis.com,
-                             │      │        cloudcode-pa.googleapis.com, pypi.org
+                             │      │        cloudcode-pa.googleapis.com, api.github.com
                              │      └────► B5 agy hooks.json (A7)
                              └─ export/import files (A4)          B6 CI/release (A8)
 ```
@@ -48,7 +48,7 @@ as the current user, in short-lived processes, with no server and no telemetry.
 | B1 | OS credential store | The OS, which only releases entries to the same user. Other programs running as that user can read them too |
 | B2 | Data dir (`%LOCALAPPDATA%\mswap`, `~/Library/Application Support/mswap`, `$XDG_DATA_HOME/mswap`) | Other local users (POSIX), other programs of the same user |
 | B3 | Subprocesses | Programs found by name on `PATH` or in the current directory |
-| B4 | Network | Google, PyPI, and anyone on the path (TLS protects it) |
+| B4 | Network | Google, GitHub (update check), and anyone on the path (TLS protects it) |
 | B5 | agy's hooks file | agy, which executes what is in it |
 | B6 | CI | GitHub Actions, third-party actions, PyPI trusted publishing |
 
@@ -69,7 +69,7 @@ hosts*.
 | S3 | A planted program stands in for a system tool (`schtasks`, `tasklist`, `icacls`, `security`, `ps`, ...) | OS tools are resolved from the system directories first (`util/systools.py`, `system_tool`/`run_system`); `test_system_tool_prefers_the_system_directory_over_the_current_directory`. `security` receives the saved login on stdin, so this matters most on macOS | Closed (F2) |
 | S4 | A planted `mswap.py`/`mswap/` in the current directory is imported instead of the real package when a launcher runs `python -m mswap` | Every launcher passes `-P` (`util/shellquote.py`, `RUN_MODULE`): the agy hook, the Windows task, the launchd agent, the systemd unit and the shim. `test_every_background_launcher_keeps_the_current_directory_off_sys_path`, `test_python_p_flag_really_blocks_a_module_planted_in_the_cwd` | Closed (F1) |
 | S5 | A fake `agy` binary is trusted for client discovery | `MSWAP_AGY_EXE` and the default install path are the user's own configuration; the discovered client is tried against the token endpoint when a refresh token is available (`agy/client_discovery.py`, `discover`) | Accepted (R5): choosing the agy binary is the user's decision |
-| S6 | A forged "newer version" nudges users to a bad install | The update check only compares a regex-validated version string and prints a static upgrade hint; it never installs (`core/updates.py`, `_VERSION_RE`, `is_newer`) | Closed |
+| S6 | A forged "newer version" nudges users to a bad install | The update check reads only the latest release's tag from `api.github.com`, compares it as a regex-validated version string, and builds the upgrade hint from that validated string alone (digits, dots, `a`/`b`/`rc`); it never installs (`core/updates.py`, `_VERSION_RE`, `is_newer`) | Closed |
 
 ### T: Tampering
 
@@ -111,7 +111,7 @@ hosts*.
 | D1 | Two mswap processes (or the hook and a user) switch at once | Cross-process lock with a 10 s timeout and `LockTimeout` (exit 7) (`core/locking.py`, `acquire`); the lock is an OS file lock, so a crashed process never leaves it held | Closed |
 | D2 | A hostile bundle makes scrypt burn CPU/RAM | KDF `n`/`r`/`p` are range- and power-of-two-checked before derivation (`core/bundle.py`, `decrypt_bundle`) | Closed |
 | D3 | The audit log grows without bound | Rotated at 1 MB, one older file kept (`core/events.py`) | Closed |
-| D4 | A server answers with an enormous body | `UrllibHttp` reads the whole body; only Google/PyPI endpoints over TLS are contacted, and every call has a timeout | Accepted (R2) |
+| D4 | A server answers with an enormous body | `UrllibHttp` reads the whole body; only Google/GitHub endpoints over TLS are contacted, and every call has a timeout | Accepted (R2) |
 | D5 | A failed export destroys the user's file | Export **never overwrites** (`core/bundle.py`, `write_secure_file` uses `O_EXCL`, plus a pre-check before the passphrase prompt); a failed write only removes what it created; `test_export_refuses_to_overwrite_an_existing_file`, `test_write_secure_file_never_overwrites_even_when_the_pre_check_is_raced` | Closed (F5) |
 
 ### E: Elevation of privilege
@@ -121,7 +121,7 @@ hosts*.
 | E1 | Code execution from an untrusted repository through the agy hook (cwd module hijack) | `-P` on every launcher, see S4 | Closed (F1) |
 | E2 | Command injection through the interpreter path | See T4 | Closed (F3) |
 | E3 | The scheduled task runs with more rights than needed | `schtasks /Create` is issued without `/RL HIGHEST` and without credentials, so the task runs as the user with limited rights; launchd and systemd entries are per-user (`util/schedule_win.py`, `build_install_argv`; `util/schedule_posix.py`) | Closed |
-| E4 | A compromised release or CI job publishes a malicious package | Actions pinned (T5); workflows run with `permissions: contents: read` and grant `id-token: write` only to the two publish jobs; PyPI publishing sits behind the `pypi` environment's manual approval; no long-lived PyPI token exists (trusted publishing) | Closed |
+| E4 | A compromised release or CI job publishes a malicious package | Actions pinned (T5); workflows run with `permissions: contents: read` and grant `id-token: write` only to the two publish jobs; PyPI publishing is off unless the `PUBLISH_TO_PYPI` repository variable is set, and then sits behind the `pypi` environment's manual approval; no long-lived PyPI token exists (trusted publishing) | Closed |
 | E5 | mswap writes the live login in an unintended place | One writer only (`core/switcher.py`, `switch` and its recovery), guarded in tests by the `gemini:antigravity` safety net (`tests/conftest.py`, `_isolate`; `vault/memory.py`, `TOUCHED`) | Closed |
 | E6 | Shell injection through subprocess use | No `shell=True` anywhere; arguments are lists; the only `os.system` call is a constant empty string used to enable VT colour on Windows (`ui/theme.py`) | Closed |
 
@@ -165,7 +165,7 @@ Each is also recorded in the private follow-up list with the same severity.
 | ID | Severity | Risk | Why it is accepted |
 |----|----------|------|--------------------|
 | R1 | LOW | `quarantine` events in `events.log` carry an email | Part of the event shape the stability contract freezes; owner-only file; slot already identifies the account |
-| R2 | LOW | No response-size cap in `UrllibHttp` | Only fixed Google/PyPI hosts over TLS with timeouts; a malicious body needs a TLS compromise. Capping needs the test doubles reworked; revisit if more hosts are ever added |
+| R2 | LOW | No response-size cap in `UrllibHttp` | Only fixed Google/GitHub hosts over TLS with timeouts; a malicious body needs a TLS compromise. Capping needs the test doubles reworked; revisit if more hosts are ever added |
 | R3 | LOW | On Windows, a custom `MSWAP_HOME` outside `%LOCALAPPDATA%` gets no ACL hardening; on POSIX mswap `chmod 0700`s whatever directory `MSWAP_HOME` names | The default location is already user-only; pointing the data dir elsewhere is an explicit choice |
 | R4 | LOW | `MSWAP_EXPORT_PASSPHRASE` is visible in the process environment | Needed for unattended use; the interactive prompt is the default and the docs say so |
 | R5 | LOW | `MSWAP_AGY_EXE` / the agy path decides which binary is run for `--version` and client discovery | Whoever controls the user's environment already controls agy |

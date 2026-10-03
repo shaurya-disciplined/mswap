@@ -279,7 +279,8 @@ tells you whether `DIR` is on your PATH.
 ## Update check
 
 After a human `mswap list` or `mswap doctor`, mswap may print
-`mswap X is available (you have Y): uv tool upgrade mswap`. It asks PyPI at most once a day
+`mswap X is available (you have Y): uv tool install --force git+https://github.com/shaurya-disciplined/mswap@vX`.
+It asks GitHub for the latest release at most once a day
 (3 second timeout, silent on failure) and never prints this with `--json` or `--quiet`, or in
 `status`, `hook`, `auto` or `schedule`. Turn it off with `mswap config set updates.check false`
 or `MSWAP_NO_UPDATE_CHECK=1`. mswap never upgrades itself.

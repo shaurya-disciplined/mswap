@@ -1,4 +1,7 @@
-"""Polite update check against the PyPI JSON API.
+"""Polite update check against the latest GitHub Release.
+
+mswap ships from GitHub release tags (the installers run `uv tool install` on the tag), so
+the newest non-prerelease GitHub Release is the newest version a user can install.
 
 Owns PEP 440 comparison for N.N.N[aN|bN|rcN] versions, the 24 h cache in update.json,
 and the decision of whether a newer release exists. Never installs or upgrades anything,
@@ -18,7 +21,8 @@ from mswap.util.clock import Clock
 from mswap.util.fsx import write_private_text
 from mswap.util.http import Http
 
-PYPI_URL = "https://pypi.org/pypi/mswap/json"
+REPO = "shaurya-disciplined/mswap"
+LATEST_RELEASE_URL = f"https://api.github.com/repos/{REPO}/releases/latest"
 CACHE_TTL = timedelta(hours=24)
 TIMEOUT_S = 3.0
 
@@ -80,13 +84,20 @@ def _write_cache(path: Path, checked_at: datetime, latest: str | None) -> None:
 
 def _fetch_latest(http: Http) -> str | None:
     try:
-        resp = http.request("GET", PYPI_URL, timeout=TIMEOUT_S)
+        resp = http.request("GET", LATEST_RELEASE_URL, timeout=TIMEOUT_S)
         if resp.status != 200:
             return None
-        version = resp.json()["info"]["version"]
+        tag = resp.json()["tag_name"]
     except Exception:  # an update check must never break a command
         return None
-    return version if isinstance(version, str) else None
+    if not isinstance(tag, str) or not tag.startswith("v"):
+        return None
+    return tag[1:]
+
+
+def upgrade_command(version: str) -> str:
+    """Return the command that installs ``version`` over an existing install."""
+    return f"uv tool install --force git+https://github.com/{REPO}@v{version}"
 
 
 def latest_version(http: Http, clock: Clock, cache_path: Path) -> str | None:

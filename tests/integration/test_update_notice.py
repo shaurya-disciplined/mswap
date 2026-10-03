@@ -12,7 +12,7 @@ from mswap import __version__
 from mswap.cli import main
 from mswap.cli.context import AppContext
 from mswap.cli.update_notice import maybe_print_update_notice
-from mswap.core.updates import PYPI_URL
+from mswap.core.updates import LATEST_RELEASE_URL
 from mswap.util.http import FakeHttp, json_response
 from mswap.vault.memory import MemoryVault
 from tests.integration.test_commands_v02 import (
@@ -23,12 +23,12 @@ from tests.integration.test_commands_v02 import (
 from tests.integration.test_doctor import _setup_healthy_environment
 
 NOTICE = "mswap 99.0.0 is available"
-UPGRADE = "uv tool upgrade mswap"
+UPGRADE = "uv tool install --force git+https://github.com/shaurya-disciplined/mswap@v99.0.0"
 
 
 @pytest.fixture
-def pypi(http: FakeHttp) -> FakeHttp:
-    http.add("GET", PYPI_URL, json_response({"info": {"version": "99.0.0"}}))
+def releases(http: FakeHttp) -> FakeHttp:
+    http.add("GET", LATEST_RELEASE_URL, json_response({"tag_name": "v99.0.0"}))
     return http
 
 
@@ -53,62 +53,62 @@ def _out(ctx: AppContext) -> str:
     return ctx.out.getvalue()  # type: ignore[attr-defined]  # StringIO in tests
 
 
-def test_notice_printed_when_newer(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_notice_printed_when_newer(net_on: AppContext, releases: FakeHttp) -> None:
     maybe_print_update_notice(net_on)
     assert _out(net_on) == f"  mswap 99.0.0 is available (you have {__version__}): {UPGRADE}\n"
     assert (net_on.store.root / "update.json").exists()
 
 
 def test_no_notice_when_up_to_date(net_on: AppContext, http: FakeHttp) -> None:
-    http.add("GET", PYPI_URL, json_response({"info": {"version": __version__}}))
+    http.add("GET", LATEST_RELEASE_URL, json_response({"tag_name": f"v{__version__}"}))
     maybe_print_update_notice(net_on)
     assert _out(net_on) == ""
 
 
-def test_notice_uses_cache_for_a_day(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_notice_uses_cache_for_a_day(net_on: AppContext, releases: FakeHttp) -> None:
     maybe_print_update_notice(net_on)
     maybe_print_update_notice(net_on)
-    assert len(pypi.requests) == 1
+    assert len(releases.requests) == 1
     assert _out(net_on).count(NOTICE) == 2
 
 
-def test_suppressed_by_json(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_suppressed_by_json(net_on: AppContext, releases: FakeHttp) -> None:
     net_on.json = True
     maybe_print_update_notice(net_on)
     assert _out(net_on) == ""
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
-def test_suppressed_by_quiet(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_suppressed_by_quiet(net_on: AppContext, releases: FakeHttp) -> None:
     net_on.quiet = True
     maybe_print_update_notice(net_on)
     assert _out(net_on) == ""
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
-def test_suppressed_by_env_opt_out(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_suppressed_by_env_opt_out(net_on: AppContext, releases: FakeHttp) -> None:
     net_on.env = {**net_on.env, "MSWAP_NO_UPDATE_CHECK": "1"}
     maybe_print_update_notice(net_on)
     assert _out(net_on) == ""
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
-def test_suppressed_by_no_network(ctx: AppContext, pypi: FakeHttp) -> None:
+def test_suppressed_by_no_network(ctx: AppContext, releases: FakeHttp) -> None:
     assert ctx.env.get("MSWAP_NO_NETWORK") == "1"
     maybe_print_update_notice(ctx)
     assert _out(ctx) == ""
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
-def test_suppressed_by_setting(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_suppressed_by_setting(net_on: AppContext, releases: FakeHttp) -> None:
     net_on.store.root.mkdir(parents=True, exist_ok=True)
     (net_on.store.root / "settings.toml").write_text("[updates]\ncheck = false\n", "utf-8")
     maybe_print_update_notice(net_on)
     assert _out(net_on) == ""
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
-def test_broken_settings_file_is_silent(net_on: AppContext, pypi: FakeHttp) -> None:
+def test_broken_settings_file_is_silent(net_on: AppContext, releases: FakeHttp) -> None:
     net_on.store.root.mkdir(parents=True, exist_ok=True)
     (net_on.store.root / "settings.toml").write_text("this is [not toml", "utf-8")
     maybe_print_update_notice(net_on)
@@ -130,7 +130,7 @@ def test_doctor_shows_notice(
     vault: MemoryVault,
     monkeypatch: pytest.MonkeyPatch,
     active_net_on: None,
-    pypi: FakeHttp,
+    releases: FakeHttp,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _setup_healthy_environment(tmp_path, vault, monkeypatch)
@@ -147,7 +147,7 @@ def test_doctor_json_has_no_notice(
     vault: MemoryVault,
     monkeypatch: pytest.MonkeyPatch,
     active_net_on: None,
-    pypi: FakeHttp,
+    releases: FakeHttp,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _setup_healthy_environment(tmp_path, vault, monkeypatch)
@@ -156,14 +156,14 @@ def test_doctor_json_has_no_notice(
     out = capsys.readouterr().out
     json.loads(out)
     assert NOTICE not in out
-    assert pypi.requests == []
+    assert releases.requests == []
 
 
 def test_list_shows_notice_after_output(
     vault: MemoryVault,
     http: FakeHttp,
     active_net_on: None,
-    pypi: FakeHttp,
+    releases: FakeHttp,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _seed_config()
@@ -189,7 +189,7 @@ def test_list_json_and_status_never_check(
     vault: MemoryVault,
     http: FakeHttp,
     active_net_on: None,
-    pypi: FakeHttp,
+    releases: FakeHttp,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     _seed_config()
@@ -197,4 +197,4 @@ def test_list_json_and_status_never_check(
     main(["status"])
     main(["list", "--json", "--quiet"])
     capsys.readouterr()
-    assert all(r["url"] != PYPI_URL for r in http.requests)
+    assert all(r["url"] != LATEST_RELEASE_URL for r in http.requests)

@@ -1,8 +1,22 @@
 name: post-release
 
+# release.yml calls this after it publishes a Release: a Release created with GITHUB_TOKEN never
+# fires the `release` event for other workflows. The `release` trigger covers Releases published
+# by hand, and workflow_dispatch re-checks any tag on demand.
 on:
   release:
     types: [published]
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to verify, e.g. v1.0.1"
+        type: string
+        required: true
 
 concurrency:
   group: "post-release-${{ github.ref }}"
@@ -29,7 +43,7 @@ jobs:
         env:
           # Passed through the environment, never interpolated into the script: a tag name is
           # attacker-shaped text as far as the shell is concerned.
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ inputs.tag || github.event.release.tag_name }}
           REPO: ${{ github.repository }}
           RUNNER_LABEL: ${{ matrix.os }}
         run: |

@@ -134,3 +134,12 @@ jobs:
             FLAGS="--prerelease"
           fi
           gh release create "$TAG" dist/* --notes-file RELEASE_NOTES.md --title "$TAG" $FLAGS
+
+  # Install the published tag from GitHub on every OS, the way the installers do.
+  smoke:
+    needs: github-release
+    permissions:
+      contents: read
+    uses: ./.github/workflows/post-release.yml
+    with:
+      tag: ${{ github.ref_name }}

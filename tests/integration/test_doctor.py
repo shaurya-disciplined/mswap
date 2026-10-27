@@ -11,6 +11,7 @@ import pytest
 
 from mswap.agy.tokens import fingerprint
 from mswap.cli import main
+from mswap.cli.commands.shim import shim_text
 from mswap.core.journal import Journal
 from mswap.core.models import Account
 from mswap.core.store import AccountStore, live_target, slot_target, vault_prefix
@@ -294,6 +295,32 @@ def test_doctor_win_launchers_sac_blocked(
     assert "Run `mswap shim install`." in captured.out
 
 
+def test_doctor_win_launchers_ignores_other_tools_and_installed_shim(
+    tmp_path: Path,
+    vault: MemoryVault,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_healthy_environment(tmp_path, vault, monkeypatch)
+    monkeypatch.setenv("MSWAP_TEST_FORCE_WINDOWS", "1")
+
+    bin_dir = tmp_path / "launcher_bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    # cswap's blocked launchers share the folder; mswap's own block is fixed by the shim.
+    (bin_dir / "cswap.exe.sac-blocked").write_text("blocked", encoding="utf-8")
+    (bin_dir / "mswap.exe.sac-blocked").write_text("blocked", encoding="utf-8")
+    (bin_dir / "mswap.cmd").write_text(shim_text(r"C:\py\python.exe"), encoding="utf-8")
+
+    monkeypatch.setenv("PATH", str(bin_dir))
+    monkeypatch.setenv("MSWAP_TOOLS_BIN", str(tmp_path / "no_such_dir"))
+
+    rc = main(["doctor"])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "no blocked launchers" in captured.out
+    assert "Smart App Control blocked a launcher" not in captured.out
+
+
 def test_doctor_online_all_ok(
     tmp_path: Path,
     vault: MemoryVault,
@@ -307,6 +334,11 @@ def test_doctor_online_all_ok(
         "POST",
         "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuotaSummary",
         json_response({"groups": []}),
+    )
+    http.add(
+        "POST",
+        "https://cloudcode-pa.googleapis.com/v1internal:fetchAvailableModels",
+        json_response({"models": {}}),
     )
 
     rc = main(["doctor", "--online"])

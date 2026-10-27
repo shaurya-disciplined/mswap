@@ -29,6 +29,7 @@ from mswap.agy.client_discovery import (
 from mswap.agy.install import agy_version, os_arch, user_agent
 from mswap.agy.paths import agy_exe
 from mswap.agy.tokens import TokenService, validate_blob
+from mswap.cli.commands.shim import SHIM_NAME, is_mswap_shim
 from mswap.cli.context import AppContext
 from mswap.cli.update_notice import maybe_print_update_notice
 from mswap.core.errors import CorruptState, TokenDead
@@ -357,8 +358,10 @@ def check_win_launchers() -> Check:
                 (d / name).exists() for name in ("mswap.exe", "mswap.cmd", "cswap.exe", "cswap.cmd")
             )
             if has_launcher or d == extra_bin:
-                blocked = list(d.glob("*.sac-blocked"))
-                if blocked:
+                # Only mswap's own markers count (cswap's sit in the same folder), and a
+                # working `mswap shim install` launcher next to them means it's handled.
+                blocked = list(d.glob("mswap*.sac-blocked"))
+                if blocked and not is_mswap_shim(d / SHIM_NAME):
                     return Check(
                         id="win.launchers",
                         status="warn",

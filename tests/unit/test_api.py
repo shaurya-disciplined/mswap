@@ -87,6 +87,7 @@ def test_schema_tolerance_missing_fraction(http: FakeHttp) -> None:
 def test_schema_tolerance_integer_one(http: FakeHttp) -> None:
     data = _load_json(VARIANTS_DIR / "integer_one.json")
     http.add("POST", QUOTA_SUMMARY_URL, json_response(data))
+    http.add("POST", FETCH_MODELS_URL, json_response({"models": {}}))
 
     api = AgyApi(http, "antigravity/1.2.12 windows/amd64")
     snapshot = api.quota_summary("ya29.FAKE-token")
@@ -115,6 +116,7 @@ def test_schema_tolerance_extra_fields(http: FakeHttp) -> None:
 def test_schema_tolerance_unknown_pool(http: FakeHttp) -> None:
     data = _load_json(VARIANTS_DIR / "unknown_pool.json")
     http.add("POST", QUOTA_SUMMARY_URL, json_response(data))
+    http.add("POST", FETCH_MODELS_URL, json_response({"models": {}}))
 
     api = AgyApi(http, "antigravity/1.2.12 windows/amd64")
     snapshot = api.quota_summary("ya29.FAKE-token")
@@ -135,6 +137,67 @@ def test_schema_tolerance_empty_groups(http: FakeHttp) -> None:
 
     assert len(snapshot.pools) == 1
     assert snapshot.pools[0].key == "gemini"
+
+
+def _three_p_only_summary() -> dict[str, Any]:
+    return {
+        "groups": [
+            {
+                "displayName": "Claude and GPT models",
+                "buckets": [
+                    {"bucketId": "3p-weekly", "window": "weekly", "remainingFraction": 1},
+                    {"bucketId": "3p-5h", "window": "5h", "remainingFraction": 1},
+                ],
+            }
+        ]
+    }
+
+
+def test_summary_without_gemini_adds_gemini_5h_from_models(http: FakeHttp) -> None:
+    # agy 1.4.x shape: summary has only the 3p group, and a drained Gemini model omits
+    # remainingFraction (proto3 drops zero values).
+    models = {
+        "models": {
+            "gemini-3-flash": {
+                "displayName": "Gemini 3 Flash",
+                "modelProvider": "MODEL_PROVIDER_GOOGLE",
+                "quotaInfo": {"resetTime": "2026-10-27T16:21:08Z"},
+            },
+            "tab_flash_lite_preview": {
+                "modelProvider": "MODEL_PROVIDER_GOOGLE",
+                "quotaInfo": {"remainingFraction": 1},
+            },
+            "claude-sonnet-4-6": {
+                "displayName": "Claude Sonnet 4.6",
+                "modelProvider": "MODEL_PROVIDER_ANTHROPIC",
+                "quotaInfo": {"remainingFraction": 1, "resetTime": "2026-10-27T21:19:34Z"},
+            },
+        }
+    }
+    http.add("POST", QUOTA_SUMMARY_URL, json_response(_three_p_only_summary()))
+    http.add("POST", FETCH_MODELS_URL, json_response(models))
+
+    snapshot = AgyApi(http, "antigravity/1.4.8 windows/amd64").quota_summary("ya29.FAKE-token")
+
+    assert snapshot.source == "summary"
+    assert [p.key for p in snapshot.pools] == ["gemini", "3p"]
+    gemini = snapshot.pools[0]
+    assert gemini.name == "Gemini"
+    assert len(gemini.buckets) == 1
+    assert gemini.buckets[0].window == "5h"
+    assert gemini.buckets[0].remaining == 0.0
+    assert gemini.buckets[0].reset_at == datetime(2026, 10, 27, 16, 21, 8, tzinfo=UTC)
+    assert [b.window for b in snapshot.pools[1].buckets] == ["5h", "weekly"]
+
+
+def test_summary_without_gemini_keeps_summary_when_models_fails(http: FakeHttp) -> None:
+    http.add("POST", QUOTA_SUMMARY_URL, json_response(_three_p_only_summary()))
+    http.add("POST", FETCH_MODELS_URL, HttpResponse(status=500, body=b"boom", headers={}))
+
+    api = AgyApi(http, "antigravity/1.4.8 windows/amd64", sleeper=lambda _s: None)
+    snapshot = api.quota_summary("ya29.FAKE-token")
+
+    assert [p.key for p in snapshot.pools] == ["3p"]
 
 
 def test_quota_summary_malformed_json(http: FakeHttp) -> None:
@@ -328,7 +391,9 @@ def test_ua_header_present_on_all_endpoints(http: FakeHttp) -> None:
     ua = "antigravity/1.2.12 windows/amd64"
     api = AgyApi(http, ua)
 
+    # A summary without Gemini also asks fetchAvailableModels, so that call is covered too.
     http.add("POST", QUOTA_SUMMARY_URL, json_response({"groups": []}))
+    http.add("POST", FETCH_MODELS_URL, json_response({"models": {}}))
     api.quota_summary("ya29.FAKE-token")
 
     http.add("POST", LOAD_CODE_ASSIST_URL, json_response({}))
@@ -336,9 +401,6 @@ def test_ua_header_present_on_all_endpoints(http: FakeHttp) -> None:
 
     http.add("GET", USERINFO_URL, json_response({"email": "alice@example.com"}))
     api.email("ya29.FAKE-token")
-
-    http.add("POST", FETCH_MODELS_URL, json_response({"models": {}}))
-    api._models_fallback("ya29.FAKE-token")
 
     assert len(http.requests) == 4
     for req in http.requests:

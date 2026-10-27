@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+### Fixed
+
+- Gemini usage shows again with agy 1.4.x. Google's quota summary now only lists the Claude & GPT group, so `mswap list` showed that pool alone (often at 100%), `mswap status` printed `G?%`, and autopilot couldn't see Gemini at all. When the summary has no Gemini group, mswap now reads Gemini's 5-hour window from the per-model quotas and keeps the summary's numbers if that lookup fails.
+- `mswap doctor` no longer reports "Smart App Control blocked a launcher" for another tool's blocked launchers (such as cswap's) in the same folder, or once `mswap shim install` has already put a working `mswap.cmd` there.
+
 ### Documentation
 
 - New logo: the "Step" mark (an m whose taller arch is the active account) and wordmark, with light and dark README variants and a social preview image in `docs/assets/`.

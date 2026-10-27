@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -275,7 +276,28 @@ class AgyApi:
                 endpoint="v1internal:retrieveUserQuotaSummary",
             )
 
-        return self._parse_summary(data, self._now())
+        snapshot = self._parse_summary(data, self._now())
+        if snapshot.pool("gemini") is None:
+            snapshot = self._with_models_gemini(snapshot, access_token)
+        return snapshot
+
+    def _with_models_gemini(self, snapshot: QuotaSnapshot, access_token: str) -> QuotaSnapshot:
+        """Add the Gemini pool from fetchAvailableModels when the summary leaves it out.
+
+        Since agy 1.4.x the summary only carries the Claude & GPT group; Gemini quota is
+        reported per model only. Its reset sits exactly 5h out on an unused account, so it
+        is the 5h window. A failed lookup keeps the summary as it is.
+        """
+        try:
+            models = self._models_fallback(access_token)
+        except ApiError:
+            return snapshot
+        gemini = models.pool("gemini")
+        if gemini is None:
+            return snapshot
+        buckets = tuple(replace(b, window="5h") for b in gemini.buckets)
+        pools = sorted((*snapshot.pools, replace(gemini, buckets=buckets)), key=_pool_sort_key)
+        return replace(snapshot, pools=tuple(pools))
 
     def _models_fallback(self, access_token: str) -> QuotaSnapshot:
         """Fallback to fetchAvailableModels when quota summary endpoint is not found."""

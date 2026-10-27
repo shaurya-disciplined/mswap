@@ -138,6 +138,9 @@ jobs:
   # Install the published tag from GitHub on every OS, the way the installers do.
   smoke:
     needs: github-release
+    # github-release follows the PyPI jobs, which are usually skipped; without this the skip
+    # carries down the chain and the install check never runs.
+    if: always() && needs.github-release.result == 'success'
     permissions:
       contents: read
     uses: ./.github/workflows/post-release.yml

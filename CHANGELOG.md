@@ -4,6 +4,10 @@ All notable changes to this project are documented here. Format: Keep a Changelo
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-27
+
+Run `uv tool install --force git+https://github.com/shaurya-disciplined/mswap@v1.0.2` (or the one-line installer again) to upgrade.
+
 ### Fixed
 
 - Gemini usage shows again with agy 1.4.x. Google's quota summary now only lists the Claude & GPT group, so `mswap list` showed that pool alone (often at 100%), `mswap status` printed `G?%`, and autopilot couldn't see Gemini at all. When the summary has no Gemini group, mswap now reads Gemini's 5-hour window from the per-model quotas and keeps the summary's numbers if that lookup fails.
@@ -178,7 +182,9 @@ Release candidate for 1.0: portability and polish.
 - CI workflow.
 - Community files and templates.
 
-[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/shaurya-disciplined/mswap/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/shaurya-disciplined/mswap/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/shaurya-disciplined/mswap/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.9.0rc1...v1.0.0
 [0.9.0rc1]: https://github.com/shaurya-disciplined/mswap/compare/v0.6.0...v0.9.0rc1
 [0.6.0]: https://github.com/shaurya-disciplined/mswap/compare/v0.5.0...v0.6.0
